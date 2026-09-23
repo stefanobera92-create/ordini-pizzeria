@@ -197,6 +197,9 @@ svg.icn{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1
 .day-chip.on{ background:var(--tomato); color:var(--tomato-ink); border-color:var(--tomato); }
 .prod-edit-row{ display:flex; gap:8px; align-items:center; margin-top:8px; }
 .prod-edit-row input{ flex:1; }
+.prod-es-row{ display:flex; gap:8px; align-items:center; margin:2px 40px 10px 14px; }
+.prod-es-row .es-label{ font-size:.7rem; font-weight:800; color:var(--ink-soft); flex:none; }
+.settings-card .prod-es-row input[type=text]{ flex:1; margin-top:0; padding:7px 10px; font-size:.84rem; background:transparent; }
 .small-x{
   border:none; background:transparent; color:var(--ink-soft); font-size:1.15rem; cursor:pointer;
   width:32px; height:32px; flex:none; display:flex; align-items:center; justify-content:center;

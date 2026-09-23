@@ -24,8 +24,29 @@
   var SUPPLIER_ICONS = { comit:'cheese', viera:'meat', alambra:'bottle', emicela:'cheese', indiano:'bottle', aral:'box', panaderia:'wheat', herbania:'fish', barril:'bottle' };
   function iconForSupplier(id){ return ic(SUPPLIER_ICONS[id] || 'pizza'); }
 
+  // nome dei prodotti di default nel messaggio ai fornitori in spagnolo
+  // (senza voce = nome uguale, es. marchi o prodotti italiani come Spianata)
+  var ES_NAMES = {
+    v1:'Cruasanes', v2:'Napolitanas', v3:'Donuts', v4:'Jamón cocido', v6:'Jamón serrano',
+    c2:'Salami', c4:'Harina', c7:'Tomate', c8:'Cajas de pizza',
+    em2:'Queso gouda', em3:'Leche',
+    in2:'Bombona de gas', in5:'Topping de coco',
+    ar1:'Bolsas de basura 120L', ar2:'Vasos 0,7 + tapas 0,7', ar3:'Vasos 0,4 + tapas 0,4',
+    ar4:'Film transparente', ar5:'Papel de aluminio', ar6:'Servilletas blancas',
+    ar7:'Bandejas de aluminio + tapas', ar8:'Paletinas de madera', ar9:'PET transparente',
+    ar10:'Vasos smoothie + tapas',
+    pn1:'Coco', he1:'Salmón',
+    ba1:'Cerveza de barril', ba2:'Sin alcohol'
+  };
+  function withEsNames(st){
+    st.suppliers.forEach(function(sup){
+      sup.prodotti.forEach(function(p){ if(ES_NAMES[p.id] && p.nomeEs === undefined) p.nomeEs = ES_NAMES[p.id]; });
+    });
+    return st;
+  }
+
   function defaultState(){
-    return {
+    return withEsNames({
       tab: 'fornitori', view: 'fornitori',
       currentSupplierId: null, settingsOpenId: null,
       suppliers: [
@@ -67,7 +88,7 @@
       ],
       drafts: {},
       lastOrders: {}
-    };
+    });
   }
 
   var state = load();
@@ -108,6 +129,15 @@
     });
 
     var defaults = defaultState();
+    // traduzioni spagnole: solo sui prodotti che hanno ancora il nome di default
+    defaults.suppliers.forEach(function(defSupplier){
+      var existing = savedState.suppliers.filter(function(s){return s.id===defSupplier.id;})[0];
+      if(!existing) return;
+      existing.prodotti.forEach(function(p){
+        var def = defSupplier.prodotti.filter(function(x){ return x.id===p.id; })[0];
+        if(def && def.nomeEs && p.nomeEs === undefined && p.nome === def.nome) p.nomeEs = def.nomeEs;
+      });
+    });
     defaults.suppliers.forEach(function(defSupplier){
       var existing = savedState.suppliers.filter(function(s){return s.id===defSupplier.id;})[0];
       if(!existing){ savedState.suppliers.push(defSupplier); return; }
@@ -129,7 +159,10 @@
   function round2(n){ return Math.round(n*100)/100; }
   function fmtNum(n){ return String(round2(n)).replace('.', ','); }
   function fmtQty(p, n){ return p.unita ? fmtNum(n)+' '+p.unita : 'x'+fmtNum(n); }
-  function msgLine(p, n){ return p.unita ? fmtNum(n)+' '+p.unita+' '+p.nome : fmtNum(n)+'x '+p.nome; }
+  function msgLine(p, n, es){
+    var nome = (es && p.nomeEs) ? p.nomeEs : p.nome;
+    return p.unita ? fmtNum(n)+' '+p.unita+' '+nome : fmtNum(n)+'x '+nome;
+  }
   function shortDate(iso){ return new Date(iso).toLocaleDateString('it-IT', { day:'numeric', month:'short' }); }
   function draftLines(supplierId){
     var s = findSupplier(supplierId); if(!s) return [];
@@ -292,7 +325,9 @@
         }).join('');
         return '<div class="prod-edit-row"><input type="text" value="'+esc(p.nome)+'" data-rename-product="'+s.id+':'+p.id+'">'+
           '<select class="unit-select" data-set-unit="'+s.id+':'+p.id+'" aria-label="Unità">'+opts+'</select>'+
-          '<button class="small-x" data-remove-product="'+s.id+':'+p.id+'">✕</button></div>';
+          '<button class="small-x" data-remove-product="'+s.id+':'+p.id+'">✕</button></div>'+
+          (langOf(s) === 'es' ?
+            '<div class="prod-es-row"><span class="es-label">ES</span><input type="text" placeholder="In spagnolo (vuoto = uguale)" value="'+esc(p.nomeEs||'')+'" data-rename-product-es="'+s.id+':'+p.id+'"></div>' : '');
       }).join('');
       var body = !open ? '' : (
         '<label class="field-label">Nome fornitore</label>'+
@@ -471,6 +506,14 @@
         if(p) p.nome = el.value.trim() || p.nome; save();
       });
     });
+    app.querySelectorAll('[data-rename-product-es]').forEach(function(el){
+      el.addEventListener('change', function(){
+        var parts = el.getAttribute('data-rename-product-es').split(':');
+        var s = findSupplier(parts[0]); if(!s) return;
+        var p = s.prodotti.filter(function(x){return x.id===parts[1];})[0];
+        if(p){ p.nomeEs = el.value.trim(); save(); }
+      });
+    });
     app.querySelectorAll('[data-set-unit]').forEach(function(el){
       el.addEventListener('change', function(){
         var parts = el.getAttribute('data-set-unit').split(':');
@@ -543,7 +586,7 @@
     var es = langOf(s) === 'es';
     // tono informale ma da ordinazione, con saluto in base all'ora
     var text = greeting(es) + '\n' + (es ? 'Quería hacer un pedido, por favor:' : 'Vorrei fare un ordine, per favore:') + '\n\n';
-    text += lines.map(function(p){ return '- ' + msgLine(p, d.qty[p.id]); }).join('\n');
+    text += lines.map(function(p){ return '- ' + msgLine(p, d.qty[p.id], es); }).join('\n');
     if(d.note && d.note.trim()) text += '\n\n' + d.note.trim();
     text += '\n\n' + (es ? '¡Muchas gracias!' : 'Grazie mille!');
     var url = (s.telefono && s.telefono.length > 5)
