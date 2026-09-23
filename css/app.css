@@ -178,6 +178,18 @@ svg.icn{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1
 .pending-head .nm{ font-weight:700; font-size:1rem; flex:1; }
 .trash-btn{ width:40px; height:40px; color:var(--danger); }
 .trash-btn svg{ width:19px; height:19px; }
+.phone-ask{
+  border:1px dashed var(--gold); border-radius:12px; padding:12px; margin:0 0 12px;
+  background:color-mix(in srgb, var(--gold) 10%, transparent);
+}
+.phone-ask-txt{ font-weight:700; font-size:.9rem; margin-bottom:8px; }
+.phone-ask-row{ display:flex; gap:8px; }
+.phone-ask-row input{
+  flex:1; min-width:0; border:1px solid var(--line-strong); background:var(--paper-2); color:var(--ink);
+  border-radius:9px; padding:9px 12px; font-family:inherit; font-size:16px;
+}
+.phone-ask-hint{ font-size:.76rem; color:var(--ink-soft); margin-top:7px; line-height:1.4; }
+.no-phone{ color:var(--gold); font-weight:700; white-space:nowrap; }
 .undo-bar{
   display:flex; align-items:center; justify-content:space-between; gap:10px;
   background:#2b211a; color:#f2ead9; border:1px solid var(--line-strong); border-radius:12px; padding:6px 8px 6px 14px;

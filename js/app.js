@@ -220,6 +220,19 @@
   function todayLabel(locale){ return new Date().toLocaleDateString(locale || 'it-IT', { weekday:'long', day:'numeric', month:'long' }); }
   // lingua del messaggio WhatsApp: spagnolo se non impostata
   function langOf(s){ return s.lingua === 'it' ? 'it' : 'es'; }
+  function hasPhone(s){ return !!(s.telefono && s.telefono.length > 5); }
+  // senza numero WhatsApp apre la scelta del contatto: lo chiediamo qui, una volta sola
+  function renderPhoneAsk(s){
+    if(hasPhone(s)) return '';
+    return '<div class="phone-ask">'+
+      '<div class="phone-ask-txt">Manca il numero WhatsApp di '+esc(s.nome)+'</div>'+
+      '<div class="phone-ask-row">'+
+        '<input type="tel" inputmode="tel" placeholder="Es. 600 11 22 33" data-quick-phone="'+s.id+'" aria-label="Numero WhatsApp">'+
+        '<button class="btn btn-sm btn-primary" data-save-quick-phone="'+s.id+'">Salva</button>'+
+      '</div>'+
+      '<div class="phone-ask-hint">Con il numero, WhatsApp apre direttamente la sua chat col messaggio pronto.</div>'+
+    '</div>';
+  }
   function renderSentAsk(supplierId){
     var d = state.drafts[supplierId];
     if(!d || !d.sentAsk) return '';
@@ -292,7 +305,7 @@
       var daysTxt = s.giorniOrdine.length ? s.giorniOrdine.slice().sort().map(function(d){return DAY_NAMES[d];}).join(' · ') : 'giorni non impostati';
       return '<button class="supplier-row'+(isToday?' today':'')+'" data-open-supplier="'+s.id+'">'+
         '<div class="supplier-icn">'+iconForSupplier(s.id)+'</div>'+
-        '<div class="supplier-body"><div class="supplier-name">'+esc(s.nome)+'</div><div class="supplier-days">'+daysTxt+'</div></div>'+
+        '<div class="supplier-body"><div class="supplier-name">'+esc(s.nome)+'</div><div class="supplier-days">'+daysTxt+(hasPhone(s)?'':' · <span class="no-phone">senza numero</span>')+'</div></div>'+
         (hasDraft ? '<span class="tag draft">Bozza</span>' : '') + (isToday ? '<span class="tag today">Oggi</span>' : '') +
         '<span class="chevron">'+ic('back').replace('icn','icn').replace('d="M15 18l-6-6 6-6"','d="M9 18l6-6-6-6"')+'</span>'+
         '</button>';
@@ -333,7 +346,7 @@
       return '<div class="ticket-line"><span>'+esc(p.nome)+'</span><span class="q">'+fmtQty(p, d.qty[p.id])+'</span></div>';
     }).join('');
     if(!lines.length) linesHtml = '<div class="empty-state" style="padding:10px 0;">Nessun articolo selezionato.</div>';
-    return renderSentAsk(s.id)+'<div class="ticket">'+
+    return renderSentAsk(s.id)+renderPhoneAsk(s)+'<div class="ticket">'+
         '<div class="head">'+esc(s.nome)+'<span class="date">'+todayLabel()+'</span></div>'+
         linesHtml+
         '<label class="field-label" for="noteField">Note al volo (opzionale)</label>'+
@@ -362,6 +375,7 @@
         '<div class="pending-head"><span class="nm">'+esc(s.nome)+'</span>'+(isToday?'<span class="tag today">Oggi</span>':'')+
           '<button class="icon-btn trash-btn" data-delete-draft="'+s.id+'" aria-label="Elimina bozza">'+ic('trash')+'</button></div>'+
         '<div class="pending-items">'+esc(itemsTxt)+'</div>'+
+        renderPhoneAsk(s)+
         '<div class="pending-actions">'+
           '<button class="btn btn-sm btn-ghost" data-open-supplier="'+s.id+'">Modifica</button>'+
           '<button class="btn btn-sm btn-whatsapp" data-send-whatsapp="'+s.id+'">'+ic('plane')+' Invia</button>'+
@@ -512,6 +526,20 @@
         if(state.view === 'summary') state.view = state.tab;
         render();
       });
+    });
+    function saveQuickPhone(sid){
+      var s = findSupplier(sid);
+      var input = app.querySelector('[data-quick-phone="'+sid+'"]');
+      if(!s || !input) return;
+      var n = normPhone(input.value);
+      if(n.length < 9){ alert('Numero non valido. Scrivilo con o senza prefisso, es. 600 11 22 33.'); input.focus(); return; }
+      s.telefono = n; render();
+    }
+    app.querySelectorAll('[data-save-quick-phone]').forEach(function(el){
+      el.addEventListener('click', function(){ saveQuickPhone(el.getAttribute('data-save-quick-phone')); });
+    });
+    app.querySelectorAll('[data-quick-phone]').forEach(function(el){
+      el.addEventListener('keydown', function(e){ if(e.key === 'Enter') saveQuickPhone(el.getAttribute('data-quick-phone')); });
     });
     app.querySelectorAll('[data-delete-draft]').forEach(function(el){
       el.addEventListener('click', function(){
@@ -680,7 +708,7 @@
     text += lines.map(function(p){ return '- ' + msgLine(p, d.qty[p.id], es); }).join('\n');
     if(d.note && d.note.trim()) text += '\n\n' + d.note.trim();
     text += '\n\n' + (es ? '¡Muchas gracias!' : 'Grazie mille!');
-    var url = (s.telefono && s.telefono.length > 5)
+    var url = hasPhone(s)
       ? 'https://wa.me/' + s.telefono + '?text=' + encodeURIComponent(text)
       : 'https://api.whatsapp.com/send?text=' + encodeURIComponent(text);
     window.open(url, '_blank');
