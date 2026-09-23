@@ -117,7 +117,19 @@
   }
   function findSupplier(id){ return state.suppliers.filter(function(s){return s.id===id;})[0] || null; }
   function todayIdx(){ return new Date().getDay(); }
-  function todayLabel(){ return new Date().toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long' }); }
+  function todayLabel(locale){ return new Date().toLocaleDateString(locale || 'it-IT', { weekday:'long', day:'numeric', month:'long' }); }
+  // lingua del messaggio WhatsApp: spagnolo se non impostata
+  function langOf(s){ return s.lingua === 'it' ? 'it' : 'es'; }
+  function renderSentAsk(supplierId){
+    var d = state.drafts[supplierId];
+    if(!d || !d.sentAsk) return '';
+    return '<div class="sent-ask">'+
+      '<div class="sent-ask-txt">Hai inviato l\'ordine su WhatsApp?</div>'+
+      '<div class="pending-actions">'+
+        '<button class="btn btn-sm btn-primary" data-clear-draft="'+supplierId+'">Sì, svuota bozza</button>'+
+        '<button class="btn btn-sm btn-ghost" data-keep-draft="'+supplierId+'">No, tienila</button>'+
+      '</div></div>';
+  }
   function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
   function render(){
@@ -195,15 +207,17 @@
       return '<div class="product-row"><div class="pname">'+esc(p.nome)+'</div>'+
         '<div class="stepper">'+
           '<button class="step-btn" data-minus="'+p.id+'" aria-label="Meno">−</button>'+
-          '<div class="qty">'+q+'</div>'+
+          '<input class="qty" type="text" inputmode="numeric" pattern="[0-9]*" value="'+q+'" data-qty="'+p.id+'" aria-label="Quantità">'+
           '<button class="step-btn" data-plus="'+p.id+'" aria-label="Più">+</button>'+
         '</div></div>';
     }).join('');
     if(!s.prodotti.length) rows = '<div class="empty-state">Nessun prodotto per questo fornitore.<br>Aggiungilo da Impostazioni.</div>';
     var count = draftLines(s.id).length;
     return '<div>'+rows+'</div>'+
-      '<div class="bottom-bar"><button class="btn btn-primary" data-goto-summary>Vedi riepilogo'+(count?(' · '+count+' articoli'):'')+'</button></div>';
+      '<div class="bottom-bar"><button class="btn btn-primary" data-goto-summary>'+summaryLabel(count)+'</button></div>';
   }
+
+  function summaryLabel(count){ return 'Vedi riepilogo'+(count?(' · '+count+' articoli'):''); }
 
   function renderSummary(){
     var s = findSupplier(state.currentSupplierId);
@@ -214,7 +228,7 @@
       return '<div class="ticket-line"><span>'+esc(p.nome)+'</span><span class="q">x'+d.qty[p.id]+'</span></div>';
     }).join('');
     if(!lines.length) linesHtml = '<div class="empty-state" style="padding:10px 0;">Nessun articolo selezionato.</div>';
-    return '<div class="ticket">'+
+    return renderSentAsk(s.id)+'<div class="ticket">'+
         '<div class="head">'+esc(s.nome)+'<span class="date">'+todayLabel()+'</span></div>'+
         linesHtml+
         '<label class="field-label" for="noteField">Note al volo (opzionale)</label>'+
@@ -230,7 +244,7 @@
       var lines = draftLines(s.id);
       var isToday = s.giorniOrdine.indexOf(todayIdx()) > -1;
       var itemsTxt = lines.map(function(p){ return p.nome + ' x' + getDraft(s.id).qty[p.id]; }).join(' · ');
-      return '<div class="pending-card">'+
+      return renderSentAsk(s.id)+'<div class="pending-card">'+
         '<div class="pending-head"><span class="nm">'+esc(s.nome)+'</span>'+(isToday?'<span class="tag today">Oggi</span>':'')+'</div>'+
         '<div class="pending-items">'+esc(itemsTxt)+'</div>'+
         '<div class="pending-actions">'+
@@ -257,6 +271,11 @@
         '<input type="text" value="'+esc(s.nome)+'" data-rename-supplier="'+s.id+'">'+
         '<label class="field-label">Numero WhatsApp (con prefisso, es. 34600000000)</label>'+
         '<input type="text" inputmode="tel" placeholder="34600000000" value="'+esc(s.telefono||'')+'" data-set-phone="'+s.id+'">'+
+        '<label class="field-label">Lingua del messaggio</label>'+
+        '<div class="day-chips">'+
+          '<button class="day-chip'+(langOf(s)==='es'?' on':'')+'" data-set-lang="'+s.id+':es">Español</button>'+
+          '<button class="day-chip'+(langOf(s)==='it'?' on':'')+'" data-set-lang="'+s.id+':it">Italiano</button>'+
+        '</div>'+
         '<label class="field-label">Giorni in cui accetta ordini</label>'+
         '<div class="day-chips">'+dayChips+'</div>'+
         '<label class="field-label">Prodotti</label>'+prodRows+
@@ -308,14 +327,30 @@
     app.querySelectorAll('[data-plus]').forEach(function(el){
       el.addEventListener('click', function(){
         var d = getDraft(state.currentSupplierId); var pid = el.getAttribute('data-plus');
-        d.qty[pid] = (d.qty[pid]||0) + 1; render();
+        d.qty[pid] = (d.qty[pid]||0) + 1; delete d.sentAsk; render();
       });
     });
     app.querySelectorAll('[data-minus]').forEach(function(el){
       el.addEventListener('click', function(){
         var d = getDraft(state.currentSupplierId); var pid = el.getAttribute('data-minus');
-        d.qty[pid] = Math.max(0, (d.qty[pid]||0) - 1); render();
+        d.qty[pid] = Math.max(0, (d.qty[pid]||0) - 1); delete d.sentAsk; render();
       });
+    });
+    // quantità scritta a mano: aggiorna senza ridisegnare, così la tastiera resta aperta
+    app.querySelectorAll('[data-qty]').forEach(function(el){
+      el.addEventListener('focus', function(){ el.select(); });
+      el.addEventListener('input', function(){
+        var d = getDraft(state.currentSupplierId);
+        var n = parseInt(el.value.replace(/[^0-9]/g,''), 10);
+        d.qty[el.getAttribute('data-qty')] = isNaN(n) ? 0 : Math.min(n, 9999);
+        delete d.sentAsk; save();
+        var btn = app.querySelector('[data-goto-summary]');
+        if(btn) btn.textContent = summaryLabel(draftLines(state.currentSupplierId).length);
+      });
+      el.addEventListener('blur', function(){
+        el.value = getDraft(state.currentSupplierId).qty[el.getAttribute('data-qty')] || 0;
+      });
+      el.addEventListener('keydown', function(e){ if(e.key === 'Enter') el.blur(); });
     });
 
     var noteField = app.querySelector('#noteField');
@@ -325,6 +360,27 @@
 
     app.querySelectorAll('[data-send-whatsapp]').forEach(function(el){
       el.addEventListener('click', function(){ sendWhatsApp(el.getAttribute('data-send-whatsapp')); });
+    });
+
+    app.querySelectorAll('[data-clear-draft]').forEach(function(el){
+      el.addEventListener('click', function(){
+        delete state.drafts[el.getAttribute('data-clear-draft')];
+        if(state.view === 'summary') state.view = state.tab;
+        render();
+      });
+    });
+    app.querySelectorAll('[data-keep-draft]').forEach(function(el){
+      el.addEventListener('click', function(){
+        var d = state.drafts[el.getAttribute('data-keep-draft')];
+        if(d) delete d.sentAsk; render();
+      });
+    });
+    app.querySelectorAll('[data-set-lang]').forEach(function(el){
+      el.addEventListener('click', function(){
+        var parts = el.getAttribute('data-set-lang').split(':');
+        var s = findSupplier(parts[0]); if(!s) return;
+        s.lingua = parts[1]; render();
+      });
     });
 
     app.querySelectorAll('[data-toggle-open]').forEach(function(el){
@@ -404,14 +460,17 @@
     var d = getDraft(supplierId);
     var lines = draftLines(supplierId);
     if(!lines.length) return;
-    var text = 'Ordine ' + s.nome + ' - ' + todayLabel() + '\n\n';
+    var es = langOf(s) === 'es';
+    var text = (es ? 'Pedido ' : 'Ordine ') + s.nome + ' - ' + todayLabel(es ? 'es-ES' : 'it-IT') + '\n\n';
     text += lines.map(function(p){ return d.qty[p.id] + 'x ' + p.nome; }).join('\n');
-    if(d.note && d.note.trim()) text += '\n\nNote: ' + d.note.trim();
-    text += '\n\nGrazie!';
+    if(d.note && d.note.trim()) text += '\n\n' + (es ? 'Notas: ' : 'Note: ') + d.note.trim();
+    text += '\n\n' + (es ? '¡Gracias!' : 'Grazie!');
     var url = (s.telefono && s.telefono.length > 5)
       ? 'https://wa.me/' + s.telefono + '?text=' + encodeURIComponent(text)
       : 'https://api.whatsapp.com/send?text=' + encodeURIComponent(text);
     window.open(url, '_blank');
+    // al ritorno nell'app chiediamo se svuotare la bozza
+    d.sentAsk = true; render();
   }
 
   render();

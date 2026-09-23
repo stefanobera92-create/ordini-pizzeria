@@ -24,6 +24,12 @@
 if('serviceWorker' in navigator){
   window.addEventListener('load', function(){
     navigator.serviceWorker.register('sw.js').catch(function(){});
+    // quando una nuova versione prende il controllo, ricarica una volta per mostrarla
+    var hadController = !!navigator.serviceWorker.controller, reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function(){
+      if(!hadController || reloaded) return;
+      reloaded = true; window.location.reload();
+    });
   });
 }
 </script>

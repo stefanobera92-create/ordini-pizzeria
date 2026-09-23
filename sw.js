@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ordini-pizzeria-v1';
+const CACHE_NAME = 'ordini-pizzeria-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -25,16 +25,19 @@ self.addEventListener('activate', function(event){
   self.clients.claim();
 });
 
+// Prima la rete (così un nuovo deploy su Netlify arriva subito), la cache solo offline.
 self.addEventListener('fetch', function(event){
   if(event.request.method !== 'GET') return;
   event.respondWith(
-    caches.match(event.request).then(function(cached){
-      if(cached) return cached;
-      return fetch(event.request).then(function(resp){
+    fetch(event.request).then(function(resp){
+      if(resp && resp.ok){
         var copy = resp.clone();
         caches.open(CACHE_NAME).then(function(cache){ cache.put(event.request, copy); });
-        return resp;
-      }).catch(function(){
+      }
+      return resp;
+    }).catch(function(){
+      return caches.match(event.request).then(function(cached){
+        if(cached) return cached;
         if(event.request.mode === 'navigate') return caches.match('./index.html');
       });
     })
