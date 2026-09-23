@@ -529,16 +529,23 @@
     }
   }
 
+  function greeting(es){
+    var h = new Date().getHours();
+    if(es) return h < 14 ? '¡Buenos días!' : (h < 21 ? '¡Buenas tardes!' : '¡Buenas noches!');
+    return h < 14 ? 'Buongiorno!' : 'Buonasera!';
+  }
+
   function sendWhatsApp(supplierId){
     var s = findSupplier(supplierId); if(!s) return;
     var d = getDraft(supplierId);
     var lines = draftLines(supplierId);
     if(!lines.length) return;
     var es = langOf(s) === 'es';
-    var text = (es ? 'Pedido ' : 'Ordine ') + s.nome + ' - ' + todayLabel(es ? 'es-ES' : 'it-IT') + '\n\n';
-    text += lines.map(function(p){ return msgLine(p, d.qty[p.id]); }).join('\n');
-    if(d.note && d.note.trim()) text += '\n\n' + (es ? 'Notas: ' : 'Note: ') + d.note.trim();
-    text += '\n\n' + (es ? '¡Gracias!' : 'Grazie!');
+    // tono informale ma da ordinazione, con saluto in base all'ora
+    var text = greeting(es) + '\n' + (es ? 'Quería hacer un pedido, por favor:' : 'Vorrei fare un ordine, per favore:') + '\n\n';
+    text += lines.map(function(p){ return '- ' + msgLine(p, d.qty[p.id]); }).join('\n');
+    if(d.note && d.note.trim()) text += '\n\n' + d.note.trim();
+    text += '\n\n' + (es ? '¡Muchas gracias!' : 'Grazie mille!');
     var url = (s.telefono && s.telefono.length > 5)
       ? 'https://wa.me/' + s.telefono + '?text=' + encodeURIComponent(text)
       : 'https://api.whatsapp.com/send?text=' + encodeURIComponent(text);
