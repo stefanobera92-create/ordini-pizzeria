@@ -21,7 +21,7 @@
     };
     return '<svg class="icn" viewBox="0 0 24 24">'+(paths[name]||paths.box)+'</svg>';
   }
-  var SUPPLIER_ICONS = { farine:'wheat', latticini:'cheese', imballaggi:'box', bevande:'bottle', salumi:'meat', 'carne-pesce':'fish' };
+  var SUPPLIER_ICONS = { aral:'box', panaderia:'wheat', herbania:'box', barril:'bottle' };
   function iconForSupplier(id){ return ic(SUPPLIER_ICONS[id] || 'pizza'); }
 
   function defaultState(){
@@ -29,29 +29,15 @@
       tab: 'fornitori', view: 'fornitori',
       currentSupplierId: null, settingsOpenId: null,
       suppliers: [
-        { id:'farine', nome:'Farine & Secchi', telefono:'', giorniOrdine:[1,4],
-          prodotti:[ {id:'p1', nome:'Farina'}, {id:'d22', nome:'Pomodoro'} ] },
-        { id:'latticini', nome:'Latticini', telefono:'', giorniOrdine:[1,3,5],
-          prodotti:[
-            {id:'p4', nome:'Mozzarella Fior di Latte'}, {id:'p5', nome:'Mozzarella di Bufala'},
-            {id:'p6', nome:'Burrata'}, {id:'p7', nome:'Parmigiano Reggiano'},
-            {id:'d20', nome:'Mozzarella pizza'}, {id:'d21', nome:'Gorgonzola'},
-            {id:'d28', nome:'Gouda'}, {id:'d31', nome:'Latte'}
-          ] },
-        { id:'imballaggi', nome:'Imballaggi', telefono:'', giorniOrdine:[3],
-          prodotti:[ {id:'p9', nome:'Scatole pizza 33cm'}, {id:'p10', nome:'Tovaglioli'}, {id:'p11', nome:'Sacchetti asporto'} ] },
-        { id:'bevande', nome:'Bevande', telefono:'', giorniOrdine:[2,5],
-          prodotti:[
-            {id:'p12', nome:'Coca-Cola'}, {id:'p13', nome:'Birra'},
-            {id:'p14', nome:'Acqua naturale'}, {id:'p15', nome:'Acqua frizzante'}, {id:'d23', nome:'Prosecco'}
-          ] },
-        { id:'salumi', nome:'Salumi & Forno', telefono:'', giorniOrdine:[],
-          prodotti:[
-            {id:'d24', nome:'Guanciale'}, {id:'d25', nome:'Spianata Piccante'}, {id:'d26', nome:'Salame Napoletano'},
-            {id:'d27', nome:'Cornetti'}, {id:'d29', nome:'Prosciutto cotto'}, {id:'d30', nome:'Prosciutto crudo'}
-          ] },
-        { id:'carne-pesce', nome:'Carne & Pesce', telefono:'', giorniOrdine:[],
-          prodotti:[ {id:'d32', nome:'Pollo'}, {id:'d33', nome:'Salmone'} ] }
+        { id:'viera', nome:'Viera', telefono:'', giorniOrdine:[], prodotti:[] },
+        { id:'comit', nome:'Comit', telefono:'', giorniOrdine:[], prodotti:[] },
+        { id:'alambra', nome:'Alambra', telefono:'', giorniOrdine:[], prodotti:[] },
+        { id:'emicela', nome:'Emicela', telefono:'', giorniOrdine:[], prodotti:[] },
+        { id:'indiano', nome:'Indiano', telefono:'', giorniOrdine:[], prodotti:[] },
+        { id:'aral', nome:'Aral (Detersivi)', telefono:'', giorniOrdine:[], prodotti:[] },
+        { id:'panaderia', nome:'Panaderia (Torte)', telefono:'', giorniOrdine:[], prodotti:[] },
+        { id:'herbania', nome:'Herbania Surgelati', telefono:'', giorniOrdine:[], prodotti:[] },
+        { id:'barril', nome:'Barril', telefono:'', giorniOrdine:[], prodotti:[] }
       ],
       drafts: {}
     };
@@ -73,17 +59,12 @@
     }catch(e){ return defaultState(); }
   }
   function mergeNewDefaults(savedState){
-    var imballaggi = savedState.suppliers.filter(function(s){return s.id==='imballaggi';})[0];
-    if(imballaggi){ imballaggi.prodotti = imballaggi.prodotti.filter(function(p){ return p.id!=='p8'; }); }
-
-    var farine = savedState.suppliers.filter(function(s){return s.id==='farine';})[0];
-    if(farine){
-      farine.prodotti = farine.prodotti.filter(function(p){ return p.id!=='p3'; });
-      var hadOldFlours = farine.prodotti.some(function(p){ return p.id==='p1' || p.id==='p2'; });
-      farine.prodotti = farine.prodotti.filter(function(p){ return p.id!=='p2'; });
-      if(hadOldFlours){ farine.prodotti = farine.prodotti.map(function(p){ return p.id==='p1' ? { id:'p1', nome:'Farina' } : p; }); }
-      var hasGenericFarina = farine.prodotti.some(function(p){ return p.nome.trim().toLowerCase()==='farina'; });
-      if(!hasGenericFarina) farine.prodotti.unshift({ id:'p1', nome:'Farina' });
+    // migrazione: sostituiamo le vecchie categorie generiche con i fornitori reali
+    var OLD_IDS = ['farine','latticini','imballaggi','bevande','salumi','carne-pesce'];
+    if(!savedState.migratedRealSuppliers){
+      savedState.suppliers = savedState.suppliers.filter(function(s){ return OLD_IDS.indexOf(s.id) === -1; });
+      OLD_IDS.forEach(function(id){ delete savedState.drafts[id]; });
+      savedState.migratedRealSuppliers = true;
     }
 
     var defaults = defaultState();
