@@ -38,13 +38,13 @@
         { id:'comit', nome:'Comit (Moreno)', telefono:'', giorniOrdine:[5,3],
           prodotti:[
             {id:'c1', nome:'Mozzarella'}, {id:'c2', nome:'Salame'}, {id:'c3', nome:'Spianata'},
-            {id:'c4', nome:'Farina'}, {id:'c5', nome:'Spolvero soia'}, {id:'c6', nome:'Gorgonzola'},
-            {id:'c7', nome:'Pomodoro'}, {id:'c8', nome:'Cartoncini pizza'}
+            {id:'c4', nome:'Farina'}, {id:'c5', nome:'Spolvero'}, {id:'c6', nome:'Gorgonzola'},
+            {id:'c7', nome:'Pomodoro'}, {id:'c8', nome:'Cartoni pizza'}
           ] },
         { id:'alambra', nome:'Alambra', telefono:'', giorniOrdine:[],
           prodotti:[ {id:'al1', nome:'San Miguel'}, {id:'al2', nome:'Alhambra'}, {id:'al3', nome:'IPA'} ] },
         { id:'emicela', nome:'Emicela', telefono:'', giorniOrdine:[1,3],
-          prodotti:[ {id:'em1', nome:'Pollo'}, {id:'em2', nome:'Formaggio'}, {id:'em3', nome:'Latte'} ] },
+          prodotti:[ {id:'em1', nome:'Pollo'}, {id:'em2', nome:'Formaggio gouda'}, {id:'em3', nome:'Latte'} ] },
         { id:'indiano', nome:'Indiano', telefono:'', giorniOrdine:[],
           prodotti:[
             {id:'in1', nome:'Barril'}, {id:'in2', nome:'Bombola gas'}, {id:'in3', nome:'Magners'},
@@ -94,6 +94,18 @@
       OLD_IDS.forEach(function(id){ delete savedState.drafts[id]; });
       savedState.migratedRealSuppliers = true;
     }
+
+    // correzione nomi: solo se il prodotto ha ancora il vecchio nome di default
+    var RENAMES = [
+      ['comit','c5','Spolvero soia','Spolvero'],
+      ['comit','c8','Cartoncini pizza','Cartoni pizza'],
+      ['emicela','em2','Formaggio','Formaggio gouda']
+    ];
+    RENAMES.forEach(function(r){
+      var sup = savedState.suppliers.filter(function(x){ return x.id===r[0]; })[0];
+      var prod = sup && sup.prodotti.filter(function(x){ return x.id===r[1]; })[0];
+      if(prod && prod.nome === r[2]) prod.nome = r[3];
+    });
 
     var defaults = defaultState();
     defaults.suppliers.forEach(function(defSupplier){
