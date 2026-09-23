@@ -63,7 +63,7 @@ svg.icn{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1
 }
 .brand{ display:flex; align-items:center; gap:11px; min-width:0; }
 .brand-mark{
-  width:38px; height:38px; flex:none; border-radius:11px;
+  width:38px; height:38px; flex:none; border-radius:11px; display:block; object-fit:cover;
   display:flex; align-items:center; justify-content:center;
   background:linear-gradient(155deg, var(--tomato), var(--tomato-2));
   color:var(--tomato-ink);
@@ -101,12 +101,13 @@ svg.icn{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1
 }
 .supplier-row:active{ transform:scale(.98); }
 .supplier-row.today{ border-color:var(--tomato); }
-.supplier-icn{
-  width:44px; height:44px; flex:none; border-radius:12px;
+.supplier-badge{
+  width:46px; height:46px; flex:none; border-radius:14px;
   display:flex; align-items:center; justify-content:center;
-  background:var(--paper-2); color:var(--tomato);
+  color:#fffaf0; font-family:'Big Shoulders Display',sans-serif; font-weight:800; font-size:1.3rem; letter-spacing:.03em;
+  box-shadow:inset 0 -3px 0 rgba(0,0,0,.18);
 }
-.supplier-icn svg{ width:22px; height:22px; }
+.supplier-badge.small{ width:36px; height:36px; border-radius:11px; font-size:1.05rem; }
 .supplier-body{ flex:1; min-width:0; }
 .supplier-name{ font-size:1.05rem; font-weight:700; }
 .supplier-days{ font-size:.76rem; color:var(--ink-soft); margin-top:3px; }
@@ -116,13 +117,24 @@ svg.icn{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1
 .tag.today{ background:var(--tomato); color:var(--tomato-ink); }
 .tag.draft{ background:var(--gold); color:var(--paper); }
 .chevron{ color:var(--ink-soft); flex:none; }
+.supplier-tags{ display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex:none; }
 
 /* product rows */
 .hint-block{ font-size:.8rem; color:var(--ink-soft); margin:2px 2px 16px; line-height:1.5; }
 .product-row{
   display:flex; align-items:center; justify-content:space-between; gap:12px;
-  padding:13px 4px; border-bottom:1px solid var(--line);
+  padding:12px 10px; border-bottom:1px solid var(--line);
+  transition:background .2s var(--ease);
 }
+/* righe con quantità in evidenza, gli zeri si fanno da parte */
+.product-row.has-qty{
+  border-radius:12px;
+  background:color-mix(in srgb, var(--tomato) 10%, var(--card));
+  border-bottom-color:transparent;
+}
+.product-row.has-qty .qty{ color:var(--tomato); background:var(--card); }
+.product-row:not(.has-qty) .qty{ color:var(--ink-soft); opacity:.6; }
+.product-row:not(.has-qty) .pname{ font-weight:500; }
 .product-row:last-child{ border-bottom:none; }
 .pname{ font-size:1rem; font-weight:600; }
 .pname .unit{ font-size:.78rem; font-weight:700; color:var(--ink-soft); margin-left:4px; }

@@ -11,19 +11,26 @@
       send: '<path d="M22 2 11 13"/><path d="M22 2 15 22 11 13 2 9z"/>',
       gear: '<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2.5 12h3M18.5 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/>',
       back: '<path d="M15 18l-6-6 6-6"/>',
-      wheat: '<path d="M12 21V4"/><path d="M12 8l-3-2M12 8l3-2M12 12l-3-2M12 12l3-2M12 16l-3-2M12 16l3-2"/>',
-      cheese: '<path d="M3 18h18l-2-9-7-5-7 5z"/><circle cx="11" cy="14" r=".8"/><circle cx="15" cy="15.5" r=".8"/><circle cx="13" cy="11" r=".8"/>',
-      box: '<path d="M3 8l9-4 9 4-9 4-9-4z"/><path d="M3 8v9l9 4 9-4V8"/><path d="M12 12v9"/>',
-      bottle: '<path d="M10 3h4v3.2c1 .8 1.5 1.8 1.5 3.3V19a2 2 0 0 1-2 2h-3a2 2 0 0 1-2-2V9.5c0-1.5.5-2.5 1.5-3.3z"/><path d="M9.5 12h5"/>',
-      meat: '<path d="M9 15c-3-1-4-4.5-2-7 1.6-2 4.6-2.5 6.8-.3l3.5 3.5c2.2 2.2 1.7 5.2-.3 6.8-2.5 2-6 1-7-2z"/><path d="M17 3s2 1 2 3-2 2-2 2"/>',
-      fish: '<path d="M3 12s3.5-5 10-5 8 5 8 5-1.5 5-8 5-10-5-10-5z"/><circle cx="16" cy="10.5" r=".8"/><path d="M3 12l-2-2.5M3 12l-2 2.5"/>',
       plane: '<path d="M22 2 11 13"/><path d="M22 2 15 22 11 13 2 9z"/>',
       trash: '<path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/>'
     };
-    return '<svg class="icn" viewBox="0 0 24 24">'+(paths[name]||paths.box)+'</svg>';
+    return '<svg class="icn" viewBox="0 0 24 24">'+(paths[name]||paths.pizza)+'</svg>';
   }
-  var SUPPLIER_ICONS = { comit:'cheese', viera:'meat', alambra:'bottle', emicela:'cheese', indiano:'bottle', aral:'box', panaderia:'wheat', herbania:'fish', barril:'bottle' };
-  function iconForSupplier(id){ return ic(SUPPLIER_ICONS[id] || 'pizza'); }
+  // ogni fornitore ha un colore suo e le iniziali, come i contatti del telefono
+  var BADGE_COLORS = ['#b23a2e','#2f6b73','#a8661c','#5b4a8a','#45573a','#8a3b5e','#3f5f8a','#b5572f','#6b6a2a','#7a4a2e'];
+  var SUPPLIER_COLOR = { viera:0, comit:1, alambra:2, emicela:3, indiano:4, aral:5, panaderia:6, herbania:7, barril:8 };
+  function badgeColor(id){
+    if(SUPPLIER_COLOR[id] !== undefined) return BADGE_COLORS[SUPPLIER_COLOR[id]];
+    var h = 0; for(var i=0;i<id.length;i++) h = (h*31 + id.charCodeAt(i)) >>> 0;
+    return BADGE_COLORS[h % BADGE_COLORS.length];
+  }
+  function initials(nome){
+    var w = String(nome).replace(/\(.*?\)/g,'').trim() || String(nome);
+    return w.replace(/[^A-Za-zÀ-ÿ0-9]/g,'').slice(0,2).toUpperCase() || '?';
+  }
+  function supplierBadge(s, small){
+    return '<div class="supplier-badge'+(small?' small':'')+'" style="background:'+badgeColor(s.id)+'">'+esc(initials(s.nome))+'</div>';
+  }
 
   // nome dei prodotti di default nel messaggio ai fornitori in spagnolo
   // (senza voce = nome uguale, es. marchi o prodotti italiani come Spianata)
@@ -267,7 +274,7 @@
     var titles = { fornitori:'Ordini', invia:'Da inviare', impostazioni:'Impostazioni' };
     return '<div class="app-bar">'+
       '<div class="brand">'+
-        '<div class="brand-mark">'+ic('pizza')+'</div>'+
+        '<img class="brand-mark" src="icons/icon.svg" alt="">'+
         '<div class="brand-text"><div class="brand-name">'+titles[state.tab]+'</div><div class="brand-sub">'+todayLabel()+'</div></div>'+
       '</div>'+
     '</div>';
@@ -301,12 +308,15 @@
     if(!state.suppliers.length) return '<div class="empty-state">Nessun fornitore ancora.<br>Aggiungine uno da Impostazioni.</div>';
     var rows = state.suppliers.map(function(s){
       var isToday = s.giorniOrdine.indexOf(today) > -1;
-      var hasDraft = draftLines(s.id).length > 0;
+      var draftCount = draftLines(s.id).length, hasDraft = draftCount > 0;
       var daysTxt = s.giorniOrdine.length ? s.giorniOrdine.slice().sort().map(function(d){return DAY_NAMES[d];}).join(' · ') : 'giorni non impostati';
       return '<button class="supplier-row'+(isToday?' today':'')+'" data-open-supplier="'+s.id+'">'+
-        '<div class="supplier-icn">'+iconForSupplier(s.id)+'</div>'+
+        supplierBadge(s)+
         '<div class="supplier-body"><div class="supplier-name">'+esc(s.nome)+'</div><div class="supplier-days">'+daysTxt+(hasPhone(s)?'':' · <span class="no-phone">senza numero</span>')+'</div></div>'+
-        (hasDraft ? '<span class="tag draft">Bozza</span>' : '') + (isToday ? '<span class="tag today">Oggi</span>' : '') +
+        ((hasDraft || isToday) ? '<div class="supplier-tags">'+
+          (isToday ? '<span class="tag today">Oggi</span>' : '') +
+          (hasDraft ? '<span class="tag draft">'+draftCount+(draftCount===1?' articolo':' articoli')+'</span>' : '') +
+        '</div>' : '') +
         '<span class="chevron">'+ic('back').replace('icn','icn').replace('d="M15 18l-6-6 6-6"','d="M9 18l6-6-6-6"')+'</span>'+
         '</button>';
     }).join('');
@@ -319,7 +329,7 @@
     var d = getDraft(s.id);
     var rows = s.prodotti.map(function(p){
       var q = d.qty[p.id] || 0;
-      return '<div class="product-row"><div class="pname">'+esc(p.nome)+(p.unita?' <span class="unit">'+p.unita+'</span>':'')+'</div>'+
+      return '<div class="product-row'+(q>0?' has-qty':'')+'"><div class="pname">'+esc(p.nome)+(p.unita?' <span class="unit">'+p.unita+'</span>':'')+'</div>'+
         '<div class="stepper">'+
           '<button class="step-btn" data-minus="'+p.id+'" aria-label="Meno">−</button>'+
           '<input class="qty" type="text" inputmode="'+(p.unita?'decimal':'numeric')+'" value="'+fmtNum(q)+'" data-qty="'+p.id+'" aria-label="Quantità">'+
@@ -422,7 +432,7 @@
       );
       return '<div class="settings-card">'+
         '<div class="settings-head" data-toggle-open="'+s.id+'">'+
-          '<div class="supplier-icn" style="width:34px;height:34px;">'+iconForSupplier(s.id)+'</div>'+
+          supplierBadge(s, true)+
           '<span class="nm" style="flex:1;margin-left:10px;">'+esc(s.nome)+'</span>'+
           '<span class="chevron">'+(open?ic('back').replace('d="M15 18l-6-6 6-6"','d="M6 9l6 6 6-6"'):ic('back').replace('d="M15 18l-6-6 6-6"','d="M9 6l6 6-6 6"'))+'</span>'+
         '</div>'+ body +
@@ -488,6 +498,8 @@
         var n = parseFloat(el.value.replace(',', '.').replace(/[^0-9.]/g,''));
         d.qty[el.getAttribute('data-qty')] = isNaN(n) ? 0 : Math.min(round2(n), 9999);
         delete d.sentAsk; save();
+        var row = el.closest('.product-row');
+        if(row) row.classList.toggle('has-qty', d.qty[el.getAttribute('data-qty')] > 0);
         var btn = app.querySelector('[data-goto-summary]');
         if(btn) btn.textContent = summaryLabel(draftLines(state.currentSupplierId).length);
       });

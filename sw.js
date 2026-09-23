@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ordini-pizzeria-v2';
+const CACHE_NAME = 'ordini-pizzeria-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -6,7 +6,8 @@ const ASSETS = [
   './js/app.js',
   './manifest.json',
   './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './icons/icon.svg'
 ];
 
 self.addEventListener('install', function(event){

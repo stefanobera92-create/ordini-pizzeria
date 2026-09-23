@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="35%" cy="28%" r="85%">
+      <stop offset="0" stop-color="#cf4a3a"/>
+      <stop offset="1" stop-color="#8c2c22"/>
+    </radialGradient>
+    <linearGradient id="cheese" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fbe19a"/>
+      <stop offset="1" stop-color="#f2c45e"/>
+    </linearGradient>
+    <linearGradient id="crust" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e3a553"/>
+      <stop offset="1" stop-color="#b9772f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <g transform="translate(256 262) scale(1.18) rotate(-12) translate(-256 -290)">
+    <!-- ombra -->
+    <path d="M142 186 Q256 138 370 186 L262 432 Q256 444 250 432 Z" fill="#000" opacity=".18" transform="translate(6 12)"/>
+    <!-- formaggio -->
+    <path d="M142 186 Q256 138 370 186 L262 432 Q256 444 250 432 Z" fill="url(#cheese)"/>
+    <!-- crosta -->
+    <path d="M128 182 Q256 124 384 182 Q390 196 378 204 Q256 152 134 204 Q122 196 128 182Z" fill="url(#crust)"/>
+    <path d="M150 178 Q256 136 362 178" fill="none" stroke="#f3c77f" stroke-width="5" stroke-linecap="round" opacity=".7"/>
+    <!-- salame -->
+    <g fill="#b3352a">
+      <circle cx="220" cy="228" r="24"/><circle cx="298" cy="238" r="21"/><circle cx="256" cy="318" r="19"/>
+    </g>
+    <g fill="#8e241c" opacity=".55">
+      <circle cx="212" cy="222" r="4"/><circle cx="228" cy="236" r="3"/><circle cx="302" cy="232" r="3.5"/><circle cx="260" cy="322" r="3"/>
+    </g>
+    <!-- basilico -->
+    <path d="M246 262 q24 -18 38 0 q-20 18 -38 0z" fill="#4f7a3a"/>
+    <path d="M249 262 q15 -1 32 0" stroke="#3a5d2a" stroke-width="2" fill="none"/>
+  </g>
+</svg>
