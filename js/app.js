@@ -65,7 +65,8 @@
         { id:'barril', nome:'Barril', telefono:'', giorniOrdine:[],
           prodotti:[ {id:'ba1', nome:'Birra alla spina'}, {id:'ba2', nome:'Senza alcol'}, {id:'ba3', nome:'Tostada'} ] }
       ],
-      drafts: {}
+      drafts: {},
+      lastOrders: {}
     };
   }
 
@@ -80,6 +81,7 @@
       parsed.tab = 'fornitori'; parsed.view = 'fornitori';
       parsed.currentSupplierId = null; parsed.settingsOpenId = null;
       if(!parsed.drafts) parsed.drafts = {};
+      if(!parsed.lastOrders) parsed.lastOrders = {};
       mergeNewDefaults(parsed);
       return parsed;
     }catch(e){ return defaultState(); }
@@ -110,6 +112,13 @@
     if(!state.drafts[supplierId]) state.drafts[supplierId] = { qty:{}, note:'' };
     return state.drafts[supplierId];
   }
+  // unità: '' = pezzi (5x), oppure 'kg' / 'L' (ammessi decimali)
+  var UNITS = ['', 'kg', 'L'];
+  function round2(n){ return Math.round(n*100)/100; }
+  function fmtNum(n){ return String(round2(n)).replace('.', ','); }
+  function fmtQty(p, n){ return p.unita ? fmtNum(n)+' '+p.unita : 'x'+fmtNum(n); }
+  function msgLine(p, n){ return p.unita ? fmtNum(n)+' '+p.unita+' '+p.nome : fmtNum(n)+'x '+p.nome; }
+  function shortDate(iso){ return new Date(iso).toLocaleDateString('it-IT', { day:'numeric', month:'short' }); }
   function draftLines(supplierId){
     var s = findSupplier(supplierId); if(!s) return [];
     var d = state.drafts[supplierId]; if(!d) return [];
@@ -204,16 +213,19 @@
     var d = getDraft(s.id);
     var rows = s.prodotti.map(function(p){
       var q = d.qty[p.id] || 0;
-      return '<div class="product-row"><div class="pname">'+esc(p.nome)+'</div>'+
+      return '<div class="product-row"><div class="pname">'+esc(p.nome)+(p.unita?' <span class="unit">'+p.unita+'</span>':'')+'</div>'+
         '<div class="stepper">'+
           '<button class="step-btn" data-minus="'+p.id+'" aria-label="Meno">−</button>'+
-          '<input class="qty" type="text" inputmode="numeric" pattern="[0-9]*" value="'+q+'" data-qty="'+p.id+'" aria-label="Quantità">'+
+          '<input class="qty" type="text" inputmode="'+(p.unita?'decimal':'numeric')+'" value="'+fmtNum(q)+'" data-qty="'+p.id+'" aria-label="Quantità">'+
           '<button class="step-btn" data-plus="'+p.id+'" aria-label="Più">+</button>'+
         '</div></div>';
     }).join('');
     if(!s.prodotti.length) rows = '<div class="empty-state">Nessun prodotto per questo fornitore.<br>Aggiungilo da Impostazioni.</div>';
     var count = draftLines(s.id).length;
-    return '<div>'+rows+'</div>'+
+    var last = state.lastOrders[s.id];
+    var repeat = (last && s.prodotti.length) ?
+      '<button class="btn btn-ghost repeat-btn" data-repeat-last="'+s.id+'">↻ Ripeti ultimo ordine ('+shortDate(last.at)+')</button>' : '';
+    return repeat+'<div>'+rows+'</div>'+
       '<div class="bottom-bar"><button class="btn btn-primary" data-goto-summary>'+summaryLabel(count)+'</button></div>';
   }
 
@@ -225,7 +237,7 @@
     var d = getDraft(s.id);
     var lines = draftLines(s.id);
     var linesHtml = lines.map(function(p){
-      return '<div class="ticket-line"><span>'+esc(p.nome)+'</span><span class="q">x'+d.qty[p.id]+'</span></div>';
+      return '<div class="ticket-line"><span>'+esc(p.nome)+'</span><span class="q">'+fmtQty(p, d.qty[p.id])+'</span></div>';
     }).join('');
     if(!lines.length) linesHtml = '<div class="empty-state" style="padding:10px 0;">Nessun articolo selezionato.</div>';
     return renderSentAsk(s.id)+'<div class="ticket">'+
@@ -243,7 +255,7 @@
     return pending.map(function(s){
       var lines = draftLines(s.id);
       var isToday = s.giorniOrdine.indexOf(todayIdx()) > -1;
-      var itemsTxt = lines.map(function(p){ return p.nome + ' x' + getDraft(s.id).qty[p.id]; }).join(' · ');
+      var itemsTxt = lines.map(function(p){ return p.nome + ' ' + fmtQty(p, getDraft(s.id).qty[p.id]); }).join(' · ');
       return renderSentAsk(s.id)+'<div class="pending-card">'+
         '<div class="pending-head"><span class="nm">'+esc(s.nome)+'</span>'+(isToday?'<span class="tag today">Oggi</span>':'')+'</div>'+
         '<div class="pending-items">'+esc(itemsTxt)+'</div>'+
@@ -263,7 +275,11 @@
         return '<button class="day-chip'+(on?' on':'')+'" data-toggle-day="'+s.id+':'+idx+'">'+DAY_NAMES[idx]+'</button>';
       }).join('');
       var prodRows = s.prodotti.map(function(p){
+        var opts = UNITS.map(function(u){
+          return '<option value="'+u+'"'+((p.unita||'')===u?' selected':'')+'>'+(u||'pz')+'</option>';
+        }).join('');
         return '<div class="prod-edit-row"><input type="text" value="'+esc(p.nome)+'" data-rename-product="'+s.id+':'+p.id+'">'+
+          '<select class="unit-select" data-set-unit="'+s.id+':'+p.id+'" aria-label="Unità">'+opts+'</select>'+
           '<button class="small-x" data-remove-product="'+s.id+':'+p.id+'">✕</button></div>';
       }).join('');
       var body = !open ? '' : (
@@ -297,6 +313,15 @@
       '<div class="prod-edit-row">'+
         '<input type="text" placeholder="Nome nuovo fornitore…" id="newSupplierInput">'+
         '<button class="small-x" id="addSupplierBtn" style="font-size:1.4rem;">＋</button>'+
+      '</div>'+
+      '<div class="section-title">Backup</div>'+
+      '<div class="settings-card">'+
+        '<div class="hint-block">Salva fornitori, prodotti, numeri e bozze in un file (es. su Drive). Se cambi telefono o svuoti i dati del browser, lo reimporti da qui.</div>'+
+        '<div class="pending-actions">'+
+          '<button class="btn btn-sm btn-primary" id="exportBtn">Esporta dati</button>'+
+          '<button class="btn btn-sm btn-ghost" id="importBtn">Importa dati</button>'+
+        '</div>'+
+        '<input type="file" id="importFile" accept="application/json,.json" hidden>'+
       '</div>';
   }
 
@@ -327,13 +352,13 @@
     app.querySelectorAll('[data-plus]').forEach(function(el){
       el.addEventListener('click', function(){
         var d = getDraft(state.currentSupplierId); var pid = el.getAttribute('data-plus');
-        d.qty[pid] = (d.qty[pid]||0) + 1; delete d.sentAsk; render();
+        d.qty[pid] = round2((d.qty[pid]||0) + 1); delete d.sentAsk; render();
       });
     });
     app.querySelectorAll('[data-minus]').forEach(function(el){
       el.addEventListener('click', function(){
         var d = getDraft(state.currentSupplierId); var pid = el.getAttribute('data-minus');
-        d.qty[pid] = Math.max(0, (d.qty[pid]||0) - 1); delete d.sentAsk; render();
+        d.qty[pid] = Math.max(0, round2((d.qty[pid]||0) - 1)); delete d.sentAsk; render();
       });
     });
     // quantità scritta a mano: aggiorna senza ridisegnare, così la tastiera resta aperta
@@ -341,17 +366,31 @@
       el.addEventListener('focus', function(){ el.select(); });
       el.addEventListener('input', function(){
         var d = getDraft(state.currentSupplierId);
-        var n = parseInt(el.value.replace(/[^0-9]/g,''), 10);
-        d.qty[el.getAttribute('data-qty')] = isNaN(n) ? 0 : Math.min(n, 9999);
+        var n = parseFloat(el.value.replace(',', '.').replace(/[^0-9.]/g,''));
+        d.qty[el.getAttribute('data-qty')] = isNaN(n) ? 0 : Math.min(round2(n), 9999);
         delete d.sentAsk; save();
         var btn = app.querySelector('[data-goto-summary]');
         if(btn) btn.textContent = summaryLabel(draftLines(state.currentSupplierId).length);
       });
       el.addEventListener('blur', function(){
-        el.value = getDraft(state.currentSupplierId).qty[el.getAttribute('data-qty')] || 0;
+        el.value = fmtNum(getDraft(state.currentSupplierId).qty[el.getAttribute('data-qty')] || 0);
       });
       el.addEventListener('keydown', function(e){ if(e.key === 'Enter') el.blur(); });
     });
+
+    var repeatBtn = app.querySelector('[data-repeat-last]');
+    if(repeatBtn){
+      repeatBtn.addEventListener('click', function(){
+        var sid = repeatBtn.getAttribute('data-repeat-last');
+        var s = findSupplier(sid), last = state.lastOrders[sid];
+        if(!s || !last) return;
+        var d = getDraft(sid);
+        if(draftLines(sid).length && !confirm('Sostituire le quantità attuali con quelle dell\'ultimo ordine?')) return;
+        d.qty = {};
+        s.prodotti.forEach(function(p){ if(last.qty[p.id] > 0) d.qty[p.id] = last.qty[p.id]; });
+        delete d.sentAsk; render();
+      });
+    }
 
     var noteField = app.querySelector('#noteField');
     if(noteField){
@@ -420,6 +459,16 @@
         if(p) p.nome = el.value.trim() || p.nome; save();
       });
     });
+    app.querySelectorAll('[data-set-unit]').forEach(function(el){
+      el.addEventListener('change', function(){
+        var parts = el.getAttribute('data-set-unit').split(':');
+        var s = findSupplier(parts[0]); if(!s) return;
+        var p = s.prodotti.filter(function(x){return x.id===parts[1];})[0];
+        if(!p) return;
+        if(el.value) p.unita = el.value; else delete p.unita;
+        save();
+      });
+    });
     app.querySelectorAll('[data-remove-product]').forEach(function(el){
       el.addEventListener('click', function(){
         var parts = el.getAttribute('data-remove-product').split(':');
@@ -443,6 +492,19 @@
         delete state.drafts[sid]; state.settingsOpenId = null; render();
       });
     });
+    var exportBtn = app.querySelector('#exportBtn');
+    if(exportBtn){ exportBtn.addEventListener('click', exportData); }
+    var importBtn = app.querySelector('#importBtn'), importFile = app.querySelector('#importFile');
+    if(importBtn && importFile){
+      importBtn.addEventListener('click', function(){ importFile.click(); });
+      importFile.addEventListener('change', function(){
+        var f = importFile.files && importFile.files[0]; if(!f) return;
+        var reader = new FileReader();
+        reader.onload = function(){ importData(String(reader.result)); };
+        reader.readAsText(f);
+      });
+    }
+
     var addSupplierBtn = app.querySelector('#addSupplierBtn');
     if(addSupplierBtn){
       addSupplierBtn.addEventListener('click', function(){
@@ -462,7 +524,7 @@
     if(!lines.length) return;
     var es = langOf(s) === 'es';
     var text = (es ? 'Pedido ' : 'Ordine ') + s.nome + ' - ' + todayLabel(es ? 'es-ES' : 'it-IT') + '\n\n';
-    text += lines.map(function(p){ return d.qty[p.id] + 'x ' + p.nome; }).join('\n');
+    text += lines.map(function(p){ return msgLine(p, d.qty[p.id]); }).join('\n');
     if(d.note && d.note.trim()) text += '\n\n' + (es ? 'Notas: ' : 'Note: ') + d.note.trim();
     text += '\n\n' + (es ? '¡Gracias!' : 'Grazie!');
     var url = (s.telefono && s.telefono.length > 5)
@@ -470,7 +532,47 @@
       : 'https://api.whatsapp.com/send?text=' + encodeURIComponent(text);
     window.open(url, '_blank');
     // al ritorno nell'app chiediamo se svuotare la bozza
-    d.sentAsk = true; render();
+    d.sentAsk = true;
+    var lastQty = {};
+    lines.forEach(function(p){ lastQty[p.id] = d.qty[p.id]; });
+    state.lastOrders[supplierId] = { qty: lastQty, at: new Date().toISOString() };
+    render();
+  }
+
+  function exportData(){
+    var data = {
+      app: 'ordini-pizzeria', versione: 1, esportatoIl: new Date().toISOString(),
+      suppliers: state.suppliers, drafts: state.drafts, lastOrders: state.lastOrders,
+      migratedRealSuppliers: state.migratedRealSuppliers
+    };
+    var name = 'ordini-pizzeria-backup-' + new Date().toISOString().slice(0,10) + '.json';
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+    // sul telefono apre la condivisione (Drive, WhatsApp, email…), altrimenti scarica il file
+    try{
+      var file = new File([blob], name, { type:'application/json' });
+      if(navigator.canShare && navigator.canShare({ files:[file] })){
+        navigator.share({ files:[file], title: name }).catch(function(){});
+        return;
+      }
+    }catch(e){}
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+  }
+
+  function importData(text){
+    var data;
+    try{ data = JSON.parse(text); }catch(e){ alert('File non valido.'); return; }
+    if(!data || !Array.isArray(data.suppliers)){ alert('Questo file non è un backup di Ordini Pizzeria.'); return; }
+    if(!confirm('Sostituire tutti i dati attuali con quelli del backup ('+data.suppliers.length+' fornitori)?')) return;
+    state.suppliers = data.suppliers;
+    state.drafts = data.drafts || {};
+    state.lastOrders = data.lastOrders || {};
+    state.migratedRealSuppliers = true;
+    state.settingsOpenId = null;
+    render();
+    alert('Backup importato.');
   }
 
   render();

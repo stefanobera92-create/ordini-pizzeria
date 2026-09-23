@@ -123,6 +123,12 @@ svg.icn{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1
 }
 .product-row:last-child{ border-bottom:none; }
 .pname{ font-size:1rem; font-weight:600; }
+.pname .unit{ font-size:.78rem; font-weight:700; color:var(--ink-soft); margin-left:4px; }
+.repeat-btn{ margin-bottom:8px; }
+.unit-select{
+  border:1px solid var(--line-strong); background:var(--paper-2); color:var(--ink);
+  border-radius:9px; padding:10px 6px; font-family:inherit; font-size:.92rem; margin-top:4px; flex:none;
+}
 .stepper{ display:flex; align-items:stretch; border:1px solid var(--line-strong); border-radius:11px; overflow:hidden; height:42px; flex:none; }
 .step-btn{
   width:42px; background:var(--card); border:none; color:var(--tomato);
