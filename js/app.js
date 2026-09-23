@@ -59,6 +59,7 @@
     ar4:'Film transparente', ar5:'Papel de aluminio', ar6:'Servilletas blancas',
     ar7:'Bandejas de aluminio + tapas', ar8:'Paletinas de madera', ar9:'PET transparente',
     ar10:'Vasos smoothie + tapas',
+    ar11:'Bolsa de papel', ar12:'Bolsa con asa media', ar13:'Bolsa con asa pequeña', ar14:'Bolsa transparente',
     pn1:'Coco', he1:'Salmón',
     ba1:'Cerveza de barril', ba2:'Sin alcohol'
   };
@@ -101,7 +102,9 @@
             {id:'ar3', nome:'Bicchieri 0.4 + Tappi 0.4'}, {id:'ar4', nome:'Film trasparente'},
             {id:'ar5', nome:'Alluminio'}, {id:'ar6', nome:'Tovaglioli bianchi'},
             {id:'ar7', nome:'Bandeja alluminio + coperchi'}, {id:'ar8', nome:'Palettine legno'},
-            {id:'ar9', nome:'PET trasparente'}, {id:'ar10', nome:'Vaso smoothie + coperchi'}
+            {id:'ar9', nome:'PET trasparente'}, {id:'ar10', nome:'Vaso smoothie + coperchi'},
+            {id:'ar11', nome:'Buste di carta'}, {id:'ar12', nome:'Buste con manici medie'},
+            {id:'ar13', nome:'Buste con manici piccole'}, {id:'ar14', nome:'Buste trasparenti'}
           ] },
         { id:'panaderia', nome:'Panaderia (Torte)', telefono:'', giorniOrdine:[],
           prodotti:[ {id:'pn1', nome:'Cocco'}, {id:'pn2', nome:'Chocolate'}, {id:'pn3', nome:'Zanahoria'} ] },
