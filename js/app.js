@@ -1,6 +1,22 @@
 (function(){
   var STORAGE_KEY = 'pizzeria-ordini-v1';
   var DAY_NAMES = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  var DAY_FULL_IT = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
+  var DAY_FULL_ES = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  var WEEK = [1,2,3,4,5,6,0]; // la settimana parte dal lunedì
+  // "Lun · Mer" oppure, per 3+ giorni di fila, "Lun–Gio"
+  function daysLabel(days){
+    var sorted = WEEK.filter(function(d){ return days.indexOf(d) > -1; });
+    var out = [], i = 0;
+    while(i < sorted.length){
+      var j = i;
+      while(j+1 < sorted.length && WEEK.indexOf(sorted[j+1]) === WEEK.indexOf(sorted[j]) + 1) j++;
+      if(j - i >= 2) out.push(DAY_NAMES[sorted[i]]+'–'+DAY_NAMES[sorted[j]]);
+      else for(var k=i;k<=j;k++) out.push(DAY_NAMES[sorted[k]]);
+      i = j + 1;
+    }
+    return out.join(' · ');
+  }
   var uid = function(){ return Math.random().toString(36).slice(2,9); };
 
   /* ---------- icone SVG ---------- */
@@ -79,7 +95,7 @@
             {id:'in1', nome:'Barril'}, {id:'in2', nome:'Bombola gas'}, {id:'in3', nome:'Magners'},
             {id:'in4', nome:'Strongbow'}, {id:'in5', nome:'Topping cocco'}
           ] },
-        { id:'aral', nome:'Aral (Detersivi)', telefono:'', giorniOrdine:[],
+        { id:'aral', nome:'Aral (Detersivi)', telefono:'', giorniOrdine:[1,2,3,4], consegna:5,
           prodotti:[
             {id:'ar1', nome:'Sacchi 120L'}, {id:'ar2', nome:'Bicchieri 0.7 + Tappi 0.7'},
             {id:'ar3', nome:'Bicchieri 0.4 + Tappi 0.4'}, {id:'ar4', nome:'Film trasparente'},
@@ -108,6 +124,7 @@
       s.nome = String(s.nome || 'Fornitore');
       s.telefono = normPhone(s.telefono || '');
       s.giorniOrdine = (Array.isArray(s.giorniOrdine) ? s.giorniOrdine : []).filter(function(d){ return d >= 0 && d <= 6; });
+      if(!(s.consegna >= 0 && s.consegna <= 6)) delete s.consegna;
       s.prodotti = (Array.isArray(s.prodotti) ? s.prodotti : []).filter(function(p){
         return p && typeof p === 'object' && p.id;
       }).map(function(p){ p.id = String(p.id); p.nome = String(p.nome || 'Prodotto'); return p; });
@@ -155,6 +172,14 @@
     }
 
     // correzione nomi: solo se il prodotto ha ancora il vecchio nome di default
+    // Aral: ordini lun–gio per consegna il venerdì (solo se i giorni non erano ancora impostati)
+    if(!savedState.migratedAralDays){
+      var aral = savedState.suppliers.filter(function(x){ return x.id==='aral'; })[0];
+      if(aral && !aral.giorniOrdine.length){ aral.giorniOrdine = [1,2,3,4]; }
+      if(aral && aral.consegna === undefined){ aral.consegna = 5; }
+      savedState.migratedAralDays = true;
+    }
+
     var RENAMES = [
       ['comit','c5','Spolvero soia','Spolvero'],
       ['comit','c8','Cartoncini pizza','Cartoni pizza'],
@@ -309,7 +334,8 @@
     var rows = state.suppliers.map(function(s){
       var isToday = s.giorniOrdine.indexOf(today) > -1;
       var draftCount = draftLines(s.id).length, hasDraft = draftCount > 0;
-      var daysTxt = s.giorniOrdine.length ? s.giorniOrdine.slice().sort().map(function(d){return DAY_NAMES[d];}).join(' · ') : 'giorni non impostati';
+      var daysTxt = s.giorniOrdine.length ? daysLabel(s.giorniOrdine) : 'giorni non impostati';
+      if(s.consegna !== undefined) daysTxt += ' · consegna ' + DAY_NAMES[s.consegna];
       return '<button class="supplier-row'+(isToday?' today':'')+'" data-open-supplier="'+s.id+'">'+
         supplierBadge(s)+
         '<div class="supplier-body"><div class="supplier-name">'+esc(s.nome)+'</div><div class="supplier-days">'+daysTxt+(hasPhone(s)?'':' · <span class="no-phone">senza numero</span>')+'</div></div>'+
@@ -397,9 +423,13 @@
   function renderSettings(){
     var cards = state.suppliers.map(function(s){
       var open = state.settingsOpenId === s.id;
-      var dayChips = [0,1,2,3,4,5,6].map(function(idx){
+      var dayChips = WEEK.map(function(idx){
         var on = s.giorniOrdine.indexOf(idx) > -1;
         return '<button class="day-chip'+(on?' on':'')+'" data-toggle-day="'+s.id+':'+idx+'">'+DAY_NAMES[idx]+'</button>';
+      }).join('');
+      var deliveryChips = WEEK.map(function(idx){
+        var on = s.consegna === idx;
+        return '<button class="day-chip'+(on?' on':'')+'" data-set-delivery="'+s.id+':'+idx+'">'+DAY_NAMES[idx]+'</button>';
       }).join('');
       var prodRows = s.prodotti.map(function(p){
         var opts = UNITS.map(function(u){
@@ -423,6 +453,8 @@
         '</div>'+
         '<label class="field-label">Giorni in cui accetta ordini</label>'+
         '<div class="day-chips">'+dayChips+'</div>'+
+        '<label class="field-label">Giorno di consegna (facoltativo)</label>'+
+        '<div class="day-chips">'+deliveryChips+'</div>'+
         '<label class="field-label">Prodotti</label>'+prodRows+
         '<div class="prod-edit-row" style="margin-top:10px;">'+
           '<input type="text" placeholder="Nuovo prodotto…" data-new-product-input="'+s.id+'">'+
@@ -605,6 +637,15 @@
         if(s){ s.telefono = normPhone(el.value); el.value = s.telefono; save(); }
       });
     });
+    app.querySelectorAll('[data-set-delivery]').forEach(function(el){
+      el.addEventListener('click', function(){
+        var parts = el.getAttribute('data-set-delivery').split(':');
+        var s = findSupplier(parts[0]); if(!s) return;
+        var idx = parseInt(parts[1],10);
+        if(s.consegna === idx) delete s.consegna; else s.consegna = idx; // ritocco = togli
+        render();
+      });
+    });
     app.querySelectorAll('[data-toggle-day]').forEach(function(el){
       el.addEventListener('click', function(){
         var parts = el.getAttribute('data-toggle-day').split(':');
@@ -716,7 +757,14 @@
     if(!lines.length) return;
     var es = langOf(s) === 'es';
     // tono informale ma da ordinazione, con saluto in base all'ora
-    var text = greeting(es) + '\n' + (es ? 'Quería hacer un pedido, por favor:' : 'Vorrei fare un ordine, per favore:') + '\n\n';
+    var intro;
+    if(s.consegna !== undefined){
+      intro = es ? 'Quería hacer un pedido para el ' + DAY_FULL_ES[s.consegna] + ', por favor:'
+                 : 'Vorrei fare un ordine per ' + DAY_FULL_IT[s.consegna] + ', per favore:';
+    } else {
+      intro = es ? 'Quería hacer un pedido, por favor:' : 'Vorrei fare un ordine, per favore:';
+    }
+    var text = greeting(es) + '\n' + intro + '\n\n';
     text += lines.map(function(p){ return '- ' + msgLine(p, d.qty[p.id], es); }).join('\n');
     if(d.note && d.note.trim()) text += '\n\n' + d.note.trim();
     text += '\n\n' + (es ? '¡Muchas gracias!' : 'Grazie mille!');
