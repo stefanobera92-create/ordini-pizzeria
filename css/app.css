@@ -33,6 +33,8 @@
   --danger:#e08a72; --ok:#8ba876;
 }
 *{box-sizing:border-box;}
+/* i pulsanti non ereditano colore e font: senza questo i nomi erano neri nel tema scuro */
+button{ font-family:inherit; color:inherit; }
 html,body{margin:0;padding:0;height:100%; scroll-padding-top:env(safe-area-inset-top,0px);}
 body{
   background:var(--paper); color:var(--ink);
@@ -127,7 +129,7 @@ svg.icn{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1
 .repeat-btn{ margin-bottom:8px; }
 .unit-select{
   border:1px solid var(--line-strong); background:var(--paper-2); color:var(--ink);
-  border-radius:9px; padding:10px 6px; font-family:inherit; font-size:.92rem; margin-top:4px; flex:none;
+  border-radius:9px; padding:10px 6px; font-family:inherit; font-size:16px; margin-top:4px; flex:none;
 }
 .stepper{ display:flex; align-items:stretch; border:1px solid var(--line-strong); border-radius:11px; overflow:hidden; height:42px; flex:none; }
 .step-btn{
@@ -164,7 +166,7 @@ svg.icn{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1
 .field-label{ font-size:.75rem; color:var(--ink-soft); font-weight:700; display:block; margin:18px 0 6px; }
 .note-field{
   width:100%; border:1px solid var(--line-strong); border-radius:11px; background:var(--paper-2);
-  color:var(--ink); font-family:inherit; font-size:.92rem; padding:11px; resize:vertical; min-height:60px;
+  color:var(--ink); font-family:inherit; font-size:16px; padding:11px; resize:vertical; min-height:60px;
 }
 
 /* invia (dashboard) */
@@ -185,9 +187,9 @@ svg.icn{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1
 .settings-card{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:12px; box-shadow:var(--shadow-soft); }
 .settings-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; }
 .settings-head .nm{ font-weight:700; font-size:1rem; }
-.settings-card input[type=text]{
+.settings-card input[type=text], .prod-edit-row input[type=text]{
   width:100%; border:1px solid var(--line-strong); background:var(--paper-2); color:var(--ink);
-  border-radius:9px; padding:10px 12px; font-family:inherit; font-size:.92rem; margin-top:4px;
+  border-radius:9px; padding:10px 12px; font-family:inherit; font-size:16px; margin-top:4px;
 }
 .day-chips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
 .day-chip{
@@ -199,7 +201,7 @@ svg.icn{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1
 .prod-edit-row input{ flex:1; }
 .prod-es-row{ display:flex; gap:8px; align-items:center; margin:2px 40px 10px 14px; }
 .prod-es-row .es-label{ font-size:.7rem; font-weight:800; color:var(--ink-soft); flex:none; }
-.settings-card .prod-es-row input[type=text]{ flex:1; margin-top:0; padding:7px 10px; font-size:.84rem; background:transparent; }
+.settings-card .prod-es-row input[type=text]{ flex:1; margin-top:0; padding:7px 10px; font-size:16px; background:transparent; }
 .small-x{
   border:none; background:transparent; color:var(--ink-soft); font-size:1.15rem; cursor:pointer;
   width:32px; height:32px; flex:none; display:flex; align-items:center; justify-content:center;

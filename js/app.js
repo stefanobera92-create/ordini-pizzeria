@@ -91,24 +91,54 @@
     });
   }
 
+  // rende sicuri dati vecchi o importati: campi mancanti non devono bloccare l'app
+  function normalizeSuppliers(list){
+    return (Array.isArray(list) ? list : []).filter(function(s){
+      return s && typeof s === 'object' && s.id;
+    }).map(function(s){
+      s.id = String(s.id);
+      s.nome = String(s.nome || 'Fornitore');
+      s.telefono = normPhone(s.telefono || '');
+      s.giorniOrdine = (Array.isArray(s.giorniOrdine) ? s.giorniOrdine : []).filter(function(d){ return d >= 0 && d <= 6; });
+      s.prodotti = (Array.isArray(s.prodotti) ? s.prodotti : []).filter(function(p){
+        return p && typeof p === 'object' && p.id;
+      }).map(function(p){ p.id = String(p.id); p.nome = String(p.nome || 'Prodotto'); return p; });
+      return s;
+    });
+  }
+  // numero WhatsApp: solo cifre, senza 00 iniziale; 9 cifre spagnole → prefisso 34
+  function normPhone(v){
+    var n = String(v).replace(/[^0-9]/g,'').replace(/^00/, '');
+    if(n.length === 9 && /^[6789]/.test(n)) n = '34' + n;
+    return n;
+  }
+
   var state = load();
 
+  function freshState(){
+    var st = defaultState();
+    st.migratedRealSuppliers = true;
+    mergeNewDefaults(st); // registra i default già presenti
+    return st;
+  }
   function load(){
     try{
       var raw = localStorage.getItem(STORAGE_KEY);
-      if(!raw) return defaultState();
+      if(!raw) return freshState();
       var parsed = JSON.parse(raw);
-      if(!parsed || !parsed.suppliers) return defaultState();
+      if(!parsed || !Array.isArray(parsed.suppliers)) return freshState();
+      parsed.suppliers = normalizeSuppliers(parsed.suppliers);
       parsed.tab = 'fornitori'; parsed.view = 'fornitori';
       parsed.currentSupplierId = null; parsed.settingsOpenId = null;
-      if(!parsed.drafts) parsed.drafts = {};
-      if(!parsed.lastOrders) parsed.lastOrders = {};
+      if(!parsed.drafts || typeof parsed.drafts !== 'object') parsed.drafts = {};
+      if(!parsed.lastOrders || typeof parsed.lastOrders !== 'object') parsed.lastOrders = {};
       mergeNewDefaults(parsed);
       return parsed;
-    }catch(e){ return defaultState(); }
+    }catch(e){ return freshState(); }
   }
   function mergeNewDefaults(savedState){
     // migrazione: sostituiamo le vecchie categorie generiche con i fornitori reali
+    var wasMigrated = !!savedState.migratedRealSuppliers;
     var OLD_IDS = ['farine','latticini','imballaggi','bevande','salumi','carne-pesce'];
     if(!savedState.migratedRealSuppliers){
       savedState.suppliers = savedState.suppliers.filter(function(s){ return OLD_IDS.indexOf(s.id) === -1; });
@@ -138,16 +168,31 @@
         if(def && def.nomeEs && p.nomeEs === undefined && p.nome === def.nome) p.nomeEs = def.nomeEs;
       });
     });
+    // aggiunge solo i default mai visti prima: se l'utente ne elimina uno non ricompare.
+    // Prima volta con questo registro: quelli mancanti si considerano eliminati apposta.
+    var known = Array.isArray(savedState.knownDefaults) ? savedState.knownDefaults : null;
+    var addMissing = !(known === null && wasMigrated);
+    known = known || [];
+    function isNew(key){
+      if(known.indexOf(key) > -1) return false;
+      known.push(key); return addMissing;
+    }
     defaults.suppliers.forEach(function(defSupplier){
       var existing = savedState.suppliers.filter(function(s){return s.id===defSupplier.id;})[0];
-      if(!existing){ savedState.suppliers.push(defSupplier); return; }
+      var supplierIsNew = isNew('s:'+defSupplier.id);
+      if(!existing){
+        defSupplier.prodotti.forEach(function(p){ isNew('p:'+defSupplier.id+':'+p.id); });
+        if(supplierIsNew) savedState.suppliers.push(defSupplier);
+        return;
+      }
       defSupplier.prodotti.forEach(function(defProd){
         var hasIt = existing.prodotti.some(function(p){
           return p.id === defProd.id || p.nome.trim().toLowerCase() === defProd.nome.trim().toLowerCase();
         });
-        if(!hasIt) existing.prodotti.push(defProd);
+        if(isNew('p:'+defSupplier.id+':'+defProd.id) && !hasIt) existing.prodotti.push(defProd);
       });
     });
+    savedState.knownDefaults = known;
   }
   function save(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
   function getDraft(supplierId){
@@ -189,7 +234,9 @@
   function render(){
     save();
     var app = document.getElementById('app');
-    app.innerHTML = '<div class="app-shell">' + renderBar() + '<div class="screens">' + renderScreen() + '</div>' + renderNav() + '</div>';
+    var pushed = state.view === 'order' || state.view === 'summary';
+    var screen = renderScreen();
+    app.innerHTML = '<div class="app-shell">' + renderBar() + '<div class="screens">' + screen + '</div>' + (pushed ? '' : renderNav()) + '</div>';
     bindEvents();
   }
 
@@ -245,7 +292,7 @@
       return '<button class="supplier-row'+(isToday?' today':'')+'" data-open-supplier="'+s.id+'">'+
         '<div class="supplier-icn">'+iconForSupplier(s.id)+'</div>'+
         '<div class="supplier-body"><div class="supplier-name">'+esc(s.nome)+'</div><div class="supplier-days">'+daysTxt+'</div></div>'+
-        (isToday ? '<span class="tag today">Oggi</span>' : (hasDraft ? '<span class="tag draft">Bozza</span>' : '')) +
+        (hasDraft ? '<span class="tag draft">Bozza</span>' : '') + (isToday ? '<span class="tag today">Oggi</span>' : '') +
         '<span class="chevron">'+ic('back').replace('icn','icn').replace('d="M15 18l-6-6 6-6"','d="M9 18l6-6-6-6"')+'</span>'+
         '</button>';
     }).join('');
@@ -274,7 +321,7 @@
       '<div class="bottom-bar"><button class="btn btn-primary" data-goto-summary>'+summaryLabel(count)+'</button></div>';
   }
 
-  function summaryLabel(count){ return 'Vedi riepilogo'+(count?(' · '+count+' articoli'):''); }
+  function summaryLabel(count){ return 'Vedi riepilogo'+(count?(' · '+count+(count===1?' articolo':' articoli')):''); }
 
   function renderSummary(){
     var s = findSupplier(state.currentSupplierId);
@@ -485,7 +532,7 @@
     app.querySelectorAll('[data-set-phone]').forEach(function(el){
       el.addEventListener('change', function(){
         var s = findSupplier(el.getAttribute('data-set-phone'));
-        if(s) s.telefono = el.value.replace(/[^0-9]/g,''); save();
+        if(s){ s.telefono = normPhone(el.value); el.value = s.telefono; save(); }
       });
     });
     app.querySelectorAll('[data-toggle-day]').forEach(function(el){
@@ -544,7 +591,7 @@
         var sid = el.getAttribute('data-remove-supplier');
         if(!confirm('Eliminare questo fornitore e tutti i suoi prodotti?')) return;
         state.suppliers = state.suppliers.filter(function(x){return x.id!==sid;});
-        delete state.drafts[sid]; state.settingsOpenId = null; render();
+        delete state.drafts[sid]; delete state.lastOrders[sid]; state.settingsOpenId = null; render();
       });
     });
     var exportBtn = app.querySelector('#exportBtn');
@@ -557,6 +604,20 @@
         var reader = new FileReader();
         reader.onload = function(){ importData(String(reader.result)); };
         reader.readAsText(f);
+      });
+    }
+
+    app.querySelectorAll('[data-new-product-input]').forEach(function(el){
+      el.addEventListener('keydown', function(e){
+        if(e.key !== 'Enter') return;
+        var btn = app.querySelector('[data-add-product="'+el.getAttribute('data-new-product-input')+'"]');
+        if(btn) btn.click();
+      });
+    });
+    var newSupplierInput = app.querySelector('#newSupplierInput');
+    if(newSupplierInput){
+      newSupplierInput.addEventListener('keydown', function(e){
+        if(e.key === 'Enter'){ var b = app.querySelector('#addSupplierBtn'); if(b) b.click(); }
       });
     }
 
@@ -604,7 +665,7 @@
   function exportData(){
     var data = {
       app: 'ordini-pizzeria', versione: 1, esportatoIl: new Date().toISOString(),
-      suppliers: state.suppliers, drafts: state.drafts, lastOrders: state.lastOrders,
+      suppliers: state.suppliers, drafts: state.drafts, lastOrders: state.lastOrders, knownDefaults: state.knownDefaults,
       migratedRealSuppliers: state.migratedRealSuppliers
     };
     var name = 'ordini-pizzeria-backup-' + new Date().toISOString().slice(0,10) + '.json';
@@ -626,11 +687,13 @@
   function importData(text){
     var data;
     try{ data = JSON.parse(text); }catch(e){ alert('File non valido.'); return; }
-    if(!data || !Array.isArray(data.suppliers)){ alert('Questo file non è un backup di Ordini Pizzeria.'); return; }
-    if(!confirm('Sostituire tutti i dati attuali con quelli del backup ('+data.suppliers.length+' fornitori)?')) return;
-    state.suppliers = data.suppliers;
-    state.drafts = data.drafts || {};
-    state.lastOrders = data.lastOrders || {};
+    var suppliers = data && normalizeSuppliers(data.suppliers);
+    if(!suppliers || !suppliers.length){ alert('Questo file non è un backup di Ordini Pizzeria.'); return; }
+    if(!confirm('Sostituire tutti i dati attuali con quelli del backup ('+suppliers.length+' fornitori)?')) return;
+    state.suppliers = suppliers;
+    state.drafts = (data.drafts && typeof data.drafts === 'object') ? data.drafts : {};
+    state.lastOrders = (data.lastOrders && typeof data.lastOrders === 'object') ? data.lastOrders : {};
+    if(Array.isArray(data.knownDefaults)) state.knownDefaults = data.knownDefaults;
     state.migratedRealSuppliers = true;
     state.settingsOpenId = null;
     render();

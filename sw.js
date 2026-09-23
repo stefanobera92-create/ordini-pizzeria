@@ -30,7 +30,7 @@ self.addEventListener('fetch', function(event){
   if(event.request.method !== 'GET') return;
   event.respondWith(
     fetch(event.request).then(function(resp){
-      if(resp && resp.ok){
+      if(resp && (resp.ok || resp.type === 'opaque')){
         var copy = resp.clone();
         caches.open(CACHE_NAME).then(function(cache){ cache.put(event.request, copy); });
       }
