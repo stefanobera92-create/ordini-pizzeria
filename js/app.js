@@ -21,7 +21,7 @@
     };
     return '<svg class="icn" viewBox="0 0 24 24">'+(paths[name]||paths.box)+'</svg>';
   }
-  var SUPPLIER_ICONS = { aral:'box', panaderia:'wheat', herbania:'box', barril:'bottle' };
+  var SUPPLIER_ICONS = { comit:'cheese', viera:'meat', alambra:'bottle', emicela:'cheese', indiano:'bottle', aral:'box', panaderia:'wheat', herbania:'fish', barril:'bottle' };
   function iconForSupplier(id){ return ic(SUPPLIER_ICONS[id] || 'pizza'); }
 
   function defaultState(){
@@ -29,15 +29,41 @@
       tab: 'fornitori', view: 'fornitori',
       currentSupplierId: null, settingsOpenId: null,
       suppliers: [
-        { id:'viera', nome:'Viera', telefono:'', giorniOrdine:[], prodotti:[] },
-        { id:'comit', nome:'Comit', telefono:'', giorniOrdine:[], prodotti:[] },
-        { id:'alambra', nome:'Alambra', telefono:'', giorniOrdine:[], prodotti:[] },
-        { id:'emicela', nome:'Emicela', telefono:'', giorniOrdine:[], prodotti:[] },
-        { id:'indiano', nome:'Indiano', telefono:'', giorniOrdine:[], prodotti:[] },
-        { id:'aral', nome:'Aral (Detersivi)', telefono:'', giorniOrdine:[], prodotti:[] },
-        { id:'panaderia', nome:'Panaderia (Torte)', telefono:'', giorniOrdine:[], prodotti:[] },
-        { id:'herbania', nome:'Herbania Surgelati', telefono:'', giorniOrdine:[], prodotti:[] },
-        { id:'barril', nome:'Barril', telefono:'', giorniOrdine:[], prodotti:[] }
+        { id:'viera', nome:'Viera', telefono:'', giorniOrdine:[5],
+          prodotti:[
+            {id:'v1', nome:'Cornetti'}, {id:'v2', nome:'Napolitane'}, {id:'v3', nome:'Donut'},
+            {id:'v4', nome:'Prosciutto cotto'}, {id:'v5', nome:'Bacon'}, {id:'v6', nome:'Serrano'},
+            {id:'v7', nome:'Nata'}
+          ] },
+        { id:'comit', nome:'Comit (Moreno)', telefono:'', giorniOrdine:[5,3],
+          prodotti:[
+            {id:'c1', nome:'Mozzarella'}, {id:'c2', nome:'Salame'}, {id:'c3', nome:'Spianata'},
+            {id:'c4', nome:'Farina'}, {id:'c5', nome:'Spolvero soia'}, {id:'c6', nome:'Gorgonzola'},
+            {id:'c7', nome:'Pomodoro'}, {id:'c8', nome:'Cartoncini pizza'}
+          ] },
+        { id:'alambra', nome:'Alambra', telefono:'', giorniOrdine:[],
+          prodotti:[ {id:'al1', nome:'San Miguel'}, {id:'al2', nome:'Alhambra'}, {id:'al3', nome:'IPA'} ] },
+        { id:'emicela', nome:'Emicela', telefono:'', giorniOrdine:[1,3],
+          prodotti:[ {id:'em1', nome:'Pollo'}, {id:'em2', nome:'Formaggio'}, {id:'em3', nome:'Latte'} ] },
+        { id:'indiano', nome:'Indiano', telefono:'', giorniOrdine:[],
+          prodotti:[
+            {id:'in1', nome:'Barril'}, {id:'in2', nome:'Bombola gas'}, {id:'in3', nome:'Magners'},
+            {id:'in4', nome:'Strongbow'}, {id:'in5', nome:'Topping cocco'}
+          ] },
+        { id:'aral', nome:'Aral (Detersivi)', telefono:'', giorniOrdine:[],
+          prodotti:[
+            {id:'ar1', nome:'Sacchi 120L'}, {id:'ar2', nome:'Bicchieri 0.7 + Tappi 0.7'},
+            {id:'ar3', nome:'Bicchieri 0.4 + Tappi 0.4'}, {id:'ar4', nome:'Film trasparente'},
+            {id:'ar5', nome:'Alluminio'}, {id:'ar6', nome:'Tovaglioli bianchi'},
+            {id:'ar7', nome:'Bandeja alluminio + coperchi'}, {id:'ar8', nome:'Palettine legno'},
+            {id:'ar9', nome:'PET trasparente'}, {id:'ar10', nome:'Vaso smoothie + coperchi'}
+          ] },
+        { id:'panaderia', nome:'Panaderia (Torte)', telefono:'', giorniOrdine:[],
+          prodotti:[ {id:'pn1', nome:'Cocco'}, {id:'pn2', nome:'Chocolate'}, {id:'pn3', nome:'Zanahoria'} ] },
+        { id:'herbania', nome:'Herbania Surgelati', telefono:'', giorniOrdine:[],
+          prodotti:[ {id:'he1', nome:'Salmone'} ] },
+        { id:'barril', nome:'Barril', telefono:'', giorniOrdine:[],
+          prodotti:[ {id:'ba1', nome:'Birra alla spina'}, {id:'ba2', nome:'Senza alcol'}, {id:'ba3', nome:'Tostada'} ] }
       ],
       drafts: {}
     };
