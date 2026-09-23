@@ -17,7 +17,8 @@
       bottle: '<path d="M10 3h4v3.2c1 .8 1.5 1.8 1.5 3.3V19a2 2 0 0 1-2 2h-3a2 2 0 0 1-2-2V9.5c0-1.5.5-2.5 1.5-3.3z"/><path d="M9.5 12h5"/>',
       meat: '<path d="M9 15c-3-1-4-4.5-2-7 1.6-2 4.6-2.5 6.8-.3l3.5 3.5c2.2 2.2 1.7 5.2-.3 6.8-2.5 2-6 1-7-2z"/><path d="M17 3s2 1 2 3-2 2-2 2"/>',
       fish: '<path d="M3 12s3.5-5 10-5 8 5 8 5-1.5 5-8 5-10-5-10-5z"/><circle cx="16" cy="10.5" r=".8"/><path d="M3 12l-2-2.5M3 12l-2 2.5"/>',
-      plane: '<path d="M22 2 11 13"/><path d="M22 2 15 22 11 13 2 9z"/>'
+      plane: '<path d="M22 2 11 13"/><path d="M22 2 15 22 11 13 2 9z"/>',
+      trash: '<path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/>'
     };
     return '<svg class="icn" viewBox="0 0 24 24">'+(paths[name]||paths.box)+'</svg>';
   }
@@ -341,15 +342,25 @@
       '<div class="bottom-bar"><button class="btn btn-whatsapp" data-send-whatsapp="'+s.id+'" '+(lines.length?'':'disabled')+'>'+ic('plane')+' Genera messaggio WhatsApp</button></div>';
   }
 
+  // ultima bozza eliminata col cestino, recuperabile per qualche secondo
+  var undoDelete = null, undoTimer = null;
+  function renderUndo(){
+    if(!undoDelete) return '';
+    var s = findSupplier(undoDelete.supplierId);
+    return '<div class="undo-bar"><span>Bozza di '+esc(s ? s.nome : 'fornitore')+' eliminata</span>'+
+      '<button class="link-btn" data-undo-delete>Annulla</button></div>';
+  }
+
   function renderInvia(){
     var pending = state.suppliers.filter(function(s){ return draftLines(s.id).length > 0; });
-    if(!pending.length) return '<div class="empty-state">Nessun ordine in bozza al momento.<br>Vai su Fornitori per iniziarne uno.</div>';
-    return pending.map(function(s){
+    if(!pending.length) return renderUndo()+'<div class="empty-state">Nessun ordine in bozza al momento.<br>Vai su Fornitori per iniziarne uno.</div>';
+    return renderUndo()+pending.map(function(s){
       var lines = draftLines(s.id);
       var isToday = s.giorniOrdine.indexOf(todayIdx()) > -1;
       var itemsTxt = lines.map(function(p){ return p.nome + ' ' + fmtQty(p, getDraft(s.id).qty[p.id]); }).join(' · ');
       return renderSentAsk(s.id)+'<div class="pending-card">'+
-        '<div class="pending-head"><span class="nm">'+esc(s.nome)+'</span>'+(isToday?'<span class="tag today">Oggi</span>':'')+'</div>'+
+        '<div class="pending-head"><span class="nm">'+esc(s.nome)+'</span>'+(isToday?'<span class="tag today">Oggi</span>':'')+
+          '<button class="icon-btn trash-btn" data-delete-draft="'+s.id+'" aria-label="Elimina bozza">'+ic('trash')+'</button></div>'+
         '<div class="pending-items">'+esc(itemsTxt)+'</div>'+
         '<div class="pending-actions">'+
           '<button class="btn btn-sm btn-ghost" data-open-supplier="'+s.id+'">Modifica</button>'+
@@ -502,6 +513,25 @@
         render();
       });
     });
+    app.querySelectorAll('[data-delete-draft]').forEach(function(el){
+      el.addEventListener('click', function(){
+        var sid = el.getAttribute('data-delete-draft');
+        if(!state.drafts[sid]) return;
+        undoDelete = { supplierId: sid, draft: state.drafts[sid] };
+        delete state.drafts[sid];
+        clearTimeout(undoTimer);
+        undoTimer = setTimeout(function(){ undoDelete = null; if(state.view === 'invia') render(); }, 6000);
+        render();
+      });
+    });
+    var undoBtn = app.querySelector('[data-undo-delete]');
+    if(undoBtn){
+      undoBtn.addEventListener('click', function(){
+        if(!undoDelete) return;
+        state.drafts[undoDelete.supplierId] = undoDelete.draft;
+        undoDelete = null; clearTimeout(undoTimer); render();
+      });
+    }
     app.querySelectorAll('[data-keep-draft]').forEach(function(el){
       el.addEventListener('click', function(){
         var d = state.drafts[el.getAttribute('data-keep-draft')];

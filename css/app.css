@@ -45,7 +45,7 @@ body{
 svg.icn{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex:none; }
 
 .app-shell{
-  max-width:520px; margin:0 auto; min-height:100%;
+  max-width:520px; margin:0 auto; min-height:100vh; min-height:100dvh;
   display:flex; flex-direction:column; position:relative;
   background:var(--paper);
 }
@@ -175,7 +175,15 @@ svg.icn{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1
   box-shadow:var(--shadow-soft);
 }
 .pending-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
-.pending-head .nm{ font-weight:700; font-size:1rem; }
+.pending-head .nm{ font-weight:700; font-size:1rem; flex:1; }
+.trash-btn{ width:40px; height:40px; color:var(--danger); }
+.trash-btn svg{ width:19px; height:19px; }
+.undo-bar{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  background:#2b211a; color:#f2ead9; border:1px solid var(--line-strong); border-radius:12px; padding:6px 8px 6px 14px;
+  margin-bottom:12px; font-size:.9rem; font-weight:600;
+}
+.undo-bar .link-btn{ color:#e0a94a; padding:8px 10px; font-size:.9rem; }
 .pending-items{ font-size:.82rem; color:var(--ink-soft); line-height:1.6; margin-bottom:12px; }
 .pending-actions{ display:flex; gap:8px; }
 .sent-ask{ background:var(--paper-2); border:1px solid var(--basil); border-radius:14px; padding:14px; margin-bottom:12px; }
