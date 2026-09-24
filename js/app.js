@@ -38,7 +38,7 @@
   // ordine del foglietto: da mangiare, detersivi, da bere
   var SUPPLIER_ORDER = ['cafe','coca','comit','emicela','panaderia','herbania','viera','kalise','aral','alambra','indiano','barril'];
   var SUPPLIER_PHONES = {
-    cafe:'663888355', emicela:'682648689', panaderia:'648936192', herbania:'659923500',
+    cafe:'663888355', comit:'685842100', emicela:'682648689', panaderia:'648936192', herbania:'659923500',
     viera:'616413255', kalise:'641320404', aral:'657511475', alambra:'608668668',
     indiano:'651257779', barril:'651257779'
   };
@@ -67,6 +67,7 @@
     ar7:'Bandejas de aluminio + tapas', ar8:'Paletinas de madera', ar9:'PET transparente',
     ar10:'Vasos smoothie + tapas',
     ar11:'Bolsa de papel', ar12:'Bolsa con asa media', ar13:'Bolsa con asa pequeña', ar14:'Bolsa transparente',
+    cf1:'Café', cf2:'Café descafeinado',
     pn1:'Coco', he1:'Salmón',
     ba1:'Cerveza de barril', ba2:'Sin alcohol'
   };
@@ -82,9 +83,10 @@
       tab: 'fornitori', view: 'fornitori',
       currentSupplierId: null, settingsOpenId: null,
       suppliers: [
-        { id:'cafe', nome:'Cafe', telefono:normPhone('663888355'), giorniOrdine:[], prodotti:[] },
+        { id:'cafe', nome:'Cafe', telefono:normPhone('663888355'), giorniOrdine:[],
+          prodotti:[ {id:'cf1', nome:'Caffè'}, {id:'cf2', nome:'Caffè decaffeinato'} ] },
         { id:'coca', nome:'Coca', telefono:'', giorniOrdine:[], prodotti:[] },
-        { id:'comit', nome:'Comit (Moreno)', telefono:'', giorniOrdine:[1,3], consegne:{1:2, 3:4},
+        { id:'comit', nome:'Comit (Moreno)', telefono:normPhone('685842100'), giorniOrdine:[1,3], consegne:{1:2, 3:4},
           prodotti:[
             {id:'c1', nome:'Mozzarella'}, {id:'c2', nome:'Salame'}, {id:'c3', nome:'Spianata'},
             {id:'c4', nome:'Farina'}, {id:'c5', nome:'Spolvero'}, {id:'c6', nome:'Gorgonzola'},
