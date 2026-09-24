@@ -68,6 +68,7 @@
     ar10:'Vasos smoothie + tapas',
     ar11:'Bolsa de papel', ar12:'Bolsa con asa media', ar13:'Bolsa con asa pequeña', ar14:'Bolsa transparente',
     cf1:'Café', cf2:'Café descafeinado',
+    cc4:'Nestlé Limón', cc6:'Piña',
     pn1:'Coco', he1:'Salmón',
     ba1:'Cerveza de barril', ba2:'Sin alcohol'
   };
@@ -85,7 +86,12 @@
       suppliers: [
         { id:'cafe', nome:'Cafe', telefono:normPhone('663888355'), giorniOrdine:[],
           prodotti:[ {id:'cf1', nome:'Caffè'}, {id:'cf2', nome:'Caffè decaffeinato'} ] },
-        { id:'coca', nome:'Coca', telefono:'', giorniOrdine:[], prodotti:[] },
+        { id:'coca', nome:'Coca-Cola', telefono:'', giorniOrdine:[],
+          prodotti:[
+            {id:'cc1', nome:'Coca-Cola'}, {id:'cc2', nome:'Coca-Cola Zero'}, {id:'cc3', nome:'Fanta'},
+            {id:'cc4', nome:'Nestlé Limone'}, {id:'cc5', nome:'Nestlé Mango'}, {id:'cc6', nome:'Pigna'},
+            {id:'cc7', nome:'Sprite'}
+          ] },
         { id:'comit', nome:'Comit (Moreno)', telefono:normPhone('685842100'), giorniOrdine:[1,3], consegne:{1:2, 3:4},
           prodotti:[
             {id:'c1', nome:'Mozzarella'}, {id:'c2', nome:'Salame'}, {id:'c3', nome:'Spianata'},
@@ -232,6 +238,8 @@
       ['comit','c8','Cartoncini pizza','Cartoni pizza'],
       ['emicela','em2','Formaggio','Formaggio gouda']
     ];
+    var coca = savedState.suppliers.filter(function(x){ return x.id==='coca'; })[0];
+    if(coca && coca.nome === 'Coca') coca.nome = 'Coca-Cola';
     RENAMES.forEach(function(r){
       var sup = savedState.suppliers.filter(function(x){ return x.id===r[0]; })[0];
       var prod = sup && sup.prodotti.filter(function(x){ return x.id===r[1]; })[0];
