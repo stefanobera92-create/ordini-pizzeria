@@ -81,13 +81,13 @@
             {id:'v4', nome:'Prosciutto cotto'}, {id:'v5', nome:'Bacon'}, {id:'v6', nome:'Serrano'},
             {id:'v7', nome:'Nata'}
           ] },
-        { id:'comit', nome:'Comit (Moreno)', telefono:'', giorniOrdine:[5,3],
+        { id:'comit', nome:'Comit (Moreno)', telefono:'', giorniOrdine:[1,3], consegne:{1:2, 3:4},
           prodotti:[
             {id:'c1', nome:'Mozzarella'}, {id:'c2', nome:'Salame'}, {id:'c3', nome:'Spianata'},
             {id:'c4', nome:'Farina'}, {id:'c5', nome:'Spolvero'}, {id:'c6', nome:'Gorgonzola'},
             {id:'c7', nome:'Pomodoro'}, {id:'c8', nome:'Cartoni pizza'}
           ] },
-        { id:'alambra', nome:'Alambra', telefono:'', giorniOrdine:[],
+        { id:'alambra', nome:'Alambra', telefono:'', giorniOrdine:[1,4], consegne:{1:2, 4:5},
           prodotti:[ {id:'al1', nome:'San Miguel'}, {id:'al2', nome:'Alhambra'}, {id:'al3', nome:'IPA'} ] },
         { id:'emicela', nome:'Emicela', telefono:'', giorniOrdine:[1,3],
           prodotti:[ {id:'em1', nome:'Pollo'}, {id:'em2', nome:'Formaggio gouda'}, {id:'em3', nome:'Latte'} ] },
@@ -96,7 +96,7 @@
             {id:'in1', nome:'Barril'}, {id:'in2', nome:'Bombola gas'}, {id:'in3', nome:'Magners'},
             {id:'in4', nome:'Strongbow'}, {id:'in5', nome:'Topping cocco'}
           ] },
-        { id:'aral', nome:'Aral (Detersivi)', telefono:'', giorniOrdine:[1,2,3,4], consegna:5,
+        { id:'aral', nome:'Aral (Detersivi)', telefono:'', giorniOrdine:[1,2,3,4], giorniConsegna:[1,2,3,4,5],
           prodotti:[
             {id:'ar1', nome:'Sacchi 120L'}, {id:'ar2', nome:'Bicchieri 0.7 + Tappi 0.7'},
             {id:'ar3', nome:'Bicchieri 0.4 + Tappi 0.4'}, {id:'ar4', nome:'Film trasparente'},
@@ -110,7 +110,7 @@
           prodotti:[ {id:'pn1', nome:'Cocco'}, {id:'pn2', nome:'Chocolate'}, {id:'pn3', nome:'Zanahoria'} ] },
         { id:'herbania', nome:'Herbania Surgelati', telefono:'', giorniOrdine:[],
           prodotti:[ {id:'he1', nome:'Salmone'} ] },
-        { id:'barril', nome:'Barril', telefono:'', giorniOrdine:[],
+        { id:'barril', nome:'Barril', telefono:'', giorniOrdine:[1,4], consegne:{1:2, 4:5},
           prodotti:[ {id:'ba1', nome:'Birra alla spina'}, {id:'ba2', nome:'Senza alcol'}, {id:'ba3', nome:'Tostada'} ] }
       ],
       drafts: {},
@@ -127,6 +127,16 @@
       s.nome = String(s.nome || 'Fornitore');
       s.telefono = normPhone(s.telefono || '');
       s.giorniOrdine = (Array.isArray(s.giorniOrdine) ? s.giorniOrdine : []).filter(function(d){ return d >= 0 && d <= 6; });
+      s.giorniConsegna = (Array.isArray(s.giorniConsegna) ? s.giorniConsegna : []).filter(function(d){ return d >= 0 && d <= 6; });
+      if(!s.giorniConsegna.length) delete s.giorniConsegna;
+      if(s.consegne && typeof s.consegne === 'object'){
+        var map = {};
+        Object.keys(s.consegne).forEach(function(k){
+          var orderDay = parseInt(k, 10), deliveryDay = parseInt(s.consegne[k], 10);
+          if(orderDay >= 0 && orderDay <= 6 && deliveryDay >= 0 && deliveryDay <= 6) map[orderDay] = deliveryDay;
+        });
+        s.consegne = map;
+      } else delete s.consegne;
       if(!(s.consegna >= 0 && s.consegna <= 6)) delete s.consegna;
       s.prodotti = (Array.isArray(s.prodotti) ? s.prodotti : []).filter(function(p){
         return p && typeof p === 'object' && p.id;
@@ -179,8 +189,30 @@
     if(!savedState.migratedAralDays){
       var aral = savedState.suppliers.filter(function(x){ return x.id==='aral'; })[0];
       if(aral && !aral.giorniOrdine.length){ aral.giorniOrdine = [1,2,3,4]; }
-      if(aral && aral.consegna === undefined){ aral.consegna = 5; }
+      if(aral && aral.consegna === undefined && !(aral.giorniConsegna && aral.giorniConsegna.length)){ aral.consegna = 5; }
       savedState.migratedAralDays = true;
+    }
+
+    // giorni di consegna: Comit, detersivi (Aral), birra Barril e Alambra
+    if(!savedState.migratedDeliverySchedule){
+      var comit = savedState.suppliers.filter(function(x){ return x.id==='comit'; })[0];
+      if(comit){
+        var comitDays = comit.giorniOrdine.slice().sort().join(',');
+        if(comitDays === '3,5' || !comit.giorniOrdine.length) comit.giorniOrdine = [1, 3];
+        if(!comit.consegne) comit.consegne = {1:2, 3:4};
+      }
+      var aralNow = savedState.suppliers.filter(function(x){ return x.id==='aral'; })[0];
+      if(aralNow && !(aralNow.giorniConsegna && aralNow.giorniConsegna.length)){
+        aralNow.giorniConsegna = [1, 2, 3, 4, 5];
+        if(aralNow.consegna === 5) delete aralNow.consegna;
+      }
+      ['barril', 'alambra'].forEach(function(id){
+        var beer = savedState.suppliers.filter(function(x){ return x.id===id; })[0];
+        if(!beer) return;
+        if(!beer.giorniOrdine.length) beer.giorniOrdine = [1, 4];
+        if(!beer.consegne) beer.consegne = {1:2, 4:5};
+      });
+      savedState.migratedDeliverySchedule = true;
     }
 
     var RENAMES = [
@@ -251,6 +283,65 @@
     return s.prodotti.filter(function(p){ return (d.qty[p.id]||0) > 0; });
   }
   function findSupplier(id){ return state.suppliers.filter(function(s){return s.id===id;})[0] || null; }
+  function deliveryForOrderDay(s, orderDay){
+    if(!s.consegne) return null;
+    var v = s.consegne[orderDay];
+    if(v === undefined) v = s.consegne[String(orderDay)];
+    return (v >= 0 && v <= 6) ? v : null;
+  }
+  function deliveryDays(s){
+    var days = [];
+    function add(d){ if(d >= 0 && d <= 6 && days.indexOf(d) === -1) days.push(d); }
+    if(s.consegne){
+      WEEK.forEach(function(orderDay){
+        if(s.giorniOrdine.indexOf(orderDay) === -1) return;
+        var d = deliveryForOrderDay(s, orderDay);
+        if(d !== null) add(d);
+      });
+    }
+    (s.giorniConsegna || []).forEach(add);
+    if(s.consegna !== undefined) add(s.consegna);
+    return WEEK.filter(function(d){ return days.indexOf(d) > -1; });
+  }
+  // giorno che finisce nel messaggio: coppia di oggi, altrimenti il prossimo ordine, altrimenti la prossima consegna
+  function resolvedDelivery(s, draft){
+    var allowed = deliveryDays(s);
+    if(draft && draft.consegnaGiorno !== undefined && allowed.indexOf(draft.consegnaGiorno) > -1) return draft.consegnaGiorno;
+    var today = todayIdx();
+    var paired = deliveryForOrderDay(s, today);
+    if(paired !== null && s.giorniOrdine.indexOf(today) > -1) return paired;
+    if(s.consegne && s.giorniOrdine.length){
+      for(var i = 1; i <= 7; i++){
+        var orderDay = (today + i) % 7;
+        if(s.giorniOrdine.indexOf(orderDay) === -1) continue;
+        var next = deliveryForOrderDay(s, orderDay);
+        if(next !== null) return next;
+      }
+    }
+    if(!allowed.length) return null;
+    if(allowed.length === 1 && !s.giorniConsegna && !s.consegne) return allowed[0];
+    for(var j = 1; j <= 7; j++){
+      var day = (today + j) % 7;
+      if(allowed.indexOf(day) > -1) return day;
+    }
+    return allowed[0];
+  }
+  function scheduleLabel(s){
+    if(s.consegne){
+      var pairs = [];
+      WEEK.forEach(function(d){
+        if(s.giorniOrdine.indexOf(d) === -1) return;
+        var c = deliveryForOrderDay(s, d);
+        if(c === null) return;
+        pairs.push(DAY_NAMES[d]+' → '+DAY_NAMES[c]);
+      });
+      if(pairs.length) return pairs.join(' · ');
+    }
+    var daysTxt = s.giorniOrdine.length ? daysLabel(s.giorniOrdine) : 'giorni non impostati';
+    var cons = deliveryDays(s);
+    if(cons.length) daysTxt += ' · consegna ' + daysLabel(cons);
+    return daysTxt;
+  }
   function todayIdx(){ return new Date().getDay(); }
   function todayLabel(locale){ return new Date().toLocaleDateString(locale || 'it-IT', { weekday:'long', day:'numeric', month:'long' }); }
   // lingua del messaggio WhatsApp: spagnolo se non impostata
@@ -337,8 +428,7 @@
     var rows = state.suppliers.map(function(s){
       var isToday = s.giorniOrdine.indexOf(today) > -1;
       var draftCount = draftLines(s.id).length, hasDraft = draftCount > 0;
-      var daysTxt = s.giorniOrdine.length ? daysLabel(s.giorniOrdine) : 'giorni non impostati';
-      if(s.consegna !== undefined) daysTxt += ' · consegna ' + DAY_NAMES[s.consegna];
+      var daysTxt = scheduleLabel(s);
       return '<button class="supplier-row'+(isToday?' today':'')+'" data-open-supplier="'+s.id+'">'+
         supplierBadge(s)+
         '<div class="supplier-body"><div class="supplier-name">'+esc(s.nome)+'</div><div class="supplier-days">'+daysTxt+(hasPhone(s)?'':' · <span class="no-phone">senza numero</span>')+'</div></div>'+
@@ -366,11 +456,13 @@
         '</div></div>';
     }).join('');
     if(!s.prodotti.length) rows = '<div class="empty-state">Nessun prodotto per questo fornitore.<br>Aggiungilo da Impostazioni.</div>';
+    var deliveryDay = resolvedDelivery(s, d);
+    var deliveryNote = deliveryDay === null ? '' : '<div class="order-delivery">Consegna '+DAY_FULL_IT[deliveryDay]+'</div>';
     var count = draftLines(s.id).length;
     var last = state.lastOrders[s.id];
     var repeat = (last && s.prodotti.length) ?
       '<button class="btn btn-ghost repeat-btn" data-repeat-last="'+s.id+'">↻ Ripeti ultimo ordine ('+shortDate(last.at)+')</button>' : '';
-    return repeat+'<div>'+rows+'</div>'+
+    return repeat+deliveryNote+'<div>'+rows+'</div>'+
       '<div class="bottom-bar"><button class="btn btn-primary" data-goto-summary>'+summaryLabel(count)+'</button></div>';
   }
 
@@ -388,6 +480,7 @@
     return renderSentAsk(s.id)+renderPhoneAsk(s)+'<div class="ticket">'+
         '<div class="head">'+esc(s.nome)+'<span class="date">'+todayLabel()+'</span></div>'+
         linesHtml+
+        renderDeliveryPicker(s, d)+
         '<label class="field-label" for="noteField">Note al volo (opzionale)</label>'+
         '<textarea id="noteField" class="note-field" placeholder="Es. consegnate entro le 10">'+esc(d.note||'')+'</textarea>'+
       '</div>'+
@@ -423,6 +516,19 @@
     }).join('');
   }
 
+  function renderDeliveryPicker(s, d){
+    var days = deliveryDays(s);
+    if(!days.length) return '';
+    var sel = resolvedDelivery(s, d);
+    var es = langOf(s) === 'es';
+    var chips = days.map(function(idx){
+      return '<button type="button" class="day-chip'+(sel===idx?' on':'')+'" data-draft-delivery="'+s.id+':'+idx+'">'+DAY_NAMES[idx]+'</button>';
+    }).join('');
+    var hint = sel === null ? '' : (es ? 'Nel messaggio: para el ' + DAY_FULL_ES[sel] : 'Nel messaggio: per ' + DAY_FULL_IT[sel]);
+    return '<label class="field-label">Consegna</label><div class="day-chips">'+chips+'</div>'+
+      (hint ? '<div class="delivery-hint">'+esc(hint)+'</div>' : '');
+  }
+
   function renderSettings(){
     var cards = state.suppliers.map(function(s){
       var open = state.settingsOpenId === s.id;
@@ -430,9 +536,18 @@
         var on = s.giorniOrdine.indexOf(idx) > -1;
         return '<button class="day-chip'+(on?' on':'')+'" data-toggle-day="'+s.id+':'+idx+'">'+DAY_NAMES[idx]+'</button>';
       }).join('');
+      var deliveryOn = function(idx){
+        return (s.giorniConsegna || []).indexOf(idx) > -1 || s.consegna === idx;
+      };
       var deliveryChips = WEEK.map(function(idx){
-        var on = s.consegna === idx;
-        return '<button class="day-chip'+(on?' on':'')+'" data-set-delivery="'+s.id+':'+idx+'">'+DAY_NAMES[idx]+'</button>';
+        return '<button class="day-chip'+(deliveryOn(idx)?' on':'')+'" data-set-delivery="'+s.id+':'+idx+'">'+DAY_NAMES[idx]+'</button>';
+      }).join('');
+      var pairRows = WEEK.filter(function(orderDay){ return s.giorniOrdine.indexOf(orderDay) > -1; }).map(function(orderDay){
+        var cur = deliveryForOrderDay(s, orderDay);
+        var chips = WEEK.map(function(idx){
+          return '<button class="day-chip'+(cur===idx?' on':'')+'" data-set-pair="'+s.id+':'+orderDay+':'+idx+'">'+DAY_NAMES[idx]+'</button>';
+        }).join('');
+        return '<div class="pair-row"><span class="pair-label">'+DAY_NAMES[orderDay]+' →</span><div class="day-chips">'+chips+'</div></div>';
       }).join('');
       var prodRows = s.prodotti.map(function(p){
         var opts = UNITS.map(function(u){
@@ -456,7 +571,9 @@
         '</div>'+
         '<label class="field-label">Giorni in cui accetta ordini</label>'+
         '<div class="day-chips">'+dayChips+'</div>'+
-        '<label class="field-label">Giorno di consegna (facoltativo)</label>'+
+        (pairRows ? '<label class="field-label">Consegna per quel giorno</label>'+pairRows : '')+
+        '<label class="field-label">Giorni di consegna</label>'+
+        '<div class="hint-block">Per chi consegna più giorni, senza un giorno fisso per ogni ordine. Es. detersivi, da lunedì a venerdì.</div>'+
         '<div class="day-chips">'+deliveryChips+'</div>'+
         '<label class="field-label">Prodotti</label>'+prodRows+
         '<div class="prod-edit-row" style="margin-top:10px;">'+
@@ -640,12 +757,40 @@
         if(s){ s.telefono = normPhone(el.value); el.value = s.telefono; save(); }
       });
     });
+    app.querySelectorAll('[data-draft-delivery]').forEach(function(el){
+      el.addEventListener('click', function(){
+        var parts = el.getAttribute('data-draft-delivery').split(':');
+        var d = getDraft(parts[0]);
+        d.consegnaGiorno = parseInt(parts[1], 10);
+        render();
+      });
+    });
+    app.querySelectorAll('[data-set-pair]').forEach(function(el){
+      el.addEventListener('click', function(){
+        var parts = el.getAttribute('data-set-pair').split(':');
+        var s = findSupplier(parts[0]); if(!s) return;
+        var orderDay = parseInt(parts[1], 10), deliveryDay = parseInt(parts[2], 10);
+        if(!s.consegne) s.consegne = {};
+        if(deliveryForOrderDay(s, orderDay) === deliveryDay) delete s.consegne[orderDay];
+        else s.consegne[orderDay] = deliveryDay;
+        if(!Object.keys(s.consegne).length) delete s.consegne;
+        render();
+      });
+    });
     app.querySelectorAll('[data-set-delivery]').forEach(function(el){
       el.addEventListener('click', function(){
         var parts = el.getAttribute('data-set-delivery').split(':');
         var s = findSupplier(parts[0]); if(!s) return;
         var idx = parseInt(parts[1],10);
-        if(s.consegna === idx) delete s.consegna; else s.consegna = idx; // ritocco = togli
+        if(s.consegna !== undefined){
+          s.giorniConsegna = s.giorniConsegna || [];
+          if(s.giorniConsegna.indexOf(s.consegna) === -1) s.giorniConsegna.push(s.consegna);
+          delete s.consegna;
+        }
+        s.giorniConsegna = s.giorniConsegna || [];
+        var at = s.giorniConsegna.indexOf(idx);
+        if(at > -1) s.giorniConsegna.splice(at, 1); else s.giorniConsegna.push(idx);
+        if(!s.giorniConsegna.length) delete s.giorniConsegna;
         render();
       });
     });
@@ -655,7 +800,10 @@
         var s = findSupplier(parts[0]); var idx = parseInt(parts[1],10);
         if(!s) return;
         var pos = s.giorniOrdine.indexOf(idx);
-        if(pos>-1) s.giorniOrdine.splice(pos,1); else s.giorniOrdine.push(idx);
+        if(pos>-1){
+          s.giorniOrdine.splice(pos,1);
+          if(s.consegne) delete s.consegne[idx];
+        } else s.giorniOrdine.push(idx);
         render();
       });
     });
@@ -761,9 +909,10 @@
     var es = langOf(s) === 'es';
     // tono informale ma da ordinazione, con saluto in base all'ora
     var intro;
-    if(s.consegna !== undefined){
-      intro = es ? 'Quería hacer un pedido para el ' + DAY_FULL_ES[s.consegna] + ', por favor:'
-                 : 'Vorrei fare un ordine per ' + DAY_FULL_IT[s.consegna] + ', per favore:';
+    var deliveryDay = resolvedDelivery(s, d);
+    if(deliveryDay !== null){
+      intro = es ? 'Quería hacer un pedido para el ' + DAY_FULL_ES[deliveryDay] + ', por favor:'
+                 : 'Vorrei fare un ordine per ' + DAY_FULL_IT[deliveryDay] + ', per favore:';
     } else {
       intro = es ? 'Quería hacer un pedido, por favor:' : 'Vorrei fare un ordine, per favore:';
     }
