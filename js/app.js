@@ -380,6 +380,12 @@
     return daysTxt;
   }
   function todayIdx(){ return new Date().getDay(); }
+  function ordersOn(day){
+    return state.suppliers.filter(function(s){ return s.giorniOrdine.indexOf(day) > -1; });
+  }
+  function ordersTomorrow(){ return ordersOn((todayIdx() + 1) % 7); }
+  function remindOn(){ try{ return localStorage.getItem('ordini-promemoria') === '1'; }catch(e){ return false; } }
+  function remindButtonLabel(){ return remindOn() ? 'Promemoria attivi' : 'Attiva promemoria'; }
   function todayLabel(locale){ return new Date().toLocaleDateString(locale || 'it-IT', { weekday:'long', day:'numeric', month:'long' }); }
   // lingua del messaggio WhatsApp: spagnolo se non impostata
   function langOf(s){ return s.lingua === 'it' ? 'it' : 'es'; }
@@ -437,7 +443,7 @@
       return '<div class="app-bar back-row">'+
         '<button class="icon-btn" data-back aria-label="Indietro">'+ic('back')+'</button>'+
         '<div class="brand-name">'+esc(title)+'</div>'+
-        '<div style="width:38px;"></div>'+
+        '<button class="bar-link" data-go-orders>Ordini</button>'+
       '</div>';
     }
     var titles = { fornitori:'Ordini', invia:'Da inviare', impostazioni:'Impostazioni' };
@@ -475,6 +481,10 @@
   function renderFornitori(){
     var today = todayIdx();
     if(!state.suppliers.length) return '<div class="empty-state">Nessun fornitore ancora.<br>Aggiungine uno da Impostazioni.</div>';
+    var tomorrow = ordersTomorrow();
+    var remind = tomorrow.length
+      ? '<div class="remind-banner">Domani si ordina da '+esc(tomorrow.map(function(s){ return s.nome; }).join(', '))+'.</div>'
+      : '';
     var rows = state.suppliers.map(function(s){
       var isToday = s.giorniOrdine.indexOf(today) > -1;
       var draftCount = draftLines(s.id).length, hasDraft = draftCount > 0;
@@ -491,7 +501,7 @@
         '<span class="chevron">'+ic('back').replace('icn','icn').replace('d="M15 18l-6-6 6-6"','d="M9 18l6-6-6-6"')+'</span>'+
         '</button>';
     }).join('');
-    return '<div class="supplier-list">'+rows+'</div>';
+    return remind+'<div class="supplier-list">'+rows+'</div>';
   }
 
   function renderOrder(){
@@ -642,7 +652,13 @@
         '</div>'+ body +
       '</div>';
     }).join('');
-    return '<div class="section-title">Fornitori</div>'+ cards +
+    return '<div class="section-title">Promemoria</div>'+
+      '<div class="settings-card">'+
+        '<div class="hint-block">Il telefono avvisa il giorno prima, verso le 18, quando l’indomani c’è un ordine. Sul telefono l’app va aperta dalla schermata Home.</div>'+
+        '<button class="btn btn-sm btn-primary" id="remindBtn">'+remindButtonLabel()+'</button>'+
+        '<div class="hint-block" id="remindStatus"></div>'+
+      '</div>'+
+      '<div class="section-title">Fornitori</div>'+ cards +
       '<div class="prod-edit-row">'+
         '<input type="text" placeholder="Nome nuovo fornitore…" id="newSupplierInput">'+
         '<button class="small-x" id="addSupplierBtn" style="font-size:1.4rem;">＋</button>'+
@@ -664,6 +680,11 @@
     app.querySelectorAll('[data-tab]').forEach(function(el){
       el.addEventListener('click', function(){
         state.tab = el.getAttribute('data-tab'); state.view = state.tab; render();
+      });
+    });
+    app.querySelectorAll('[data-go-orders]').forEach(function(el){
+      el.addEventListener('click', function(){
+        state.tab = 'fornitori'; state.view = 'fornitori'; state.currentSupplierId = null; render();
       });
     });
     var backBtn = app.querySelector('[data-back]');
@@ -857,6 +878,7 @@
           if(s.consegne) delete s.consegne[idx];
         } else s.giorniOrdine.push(idx);
         render();
+        if(remindOn()) syncReminders();
       });
     });
     app.querySelectorAll('[data-rename-product]').forEach(function(el){
@@ -908,6 +930,12 @@
         delete state.drafts[sid]; delete state.lastOrders[sid]; state.settingsOpenId = null; render();
       });
     });
+    var remindBtn = app.querySelector('#remindBtn');
+    if(remindBtn){
+      remindBtn.addEventListener('click', function(){ enableReminders(); });
+      var status = app.querySelector('#remindStatus');
+      if(status) status.textContent = remindStatusText();
+    }
     var exportBtn = app.querySelector('#exportBtn');
     if(exportBtn){ exportBtn.addEventListener('click', exportData); }
     var importBtn = app.querySelector('#importBtn'), importFile = app.querySelector('#importFile');
@@ -1026,6 +1054,55 @@
     render();
     alert('Backup importato.');
   }
+
+  function remindSchedule(){
+    return state.suppliers.map(function(s){
+      return { nome: s.nome, giorniOrdine: s.giorniOrdine.slice() };
+    }).filter(function(s){ return s.giorniOrdine.length; });
+  }
+  function remindStatusText(){
+    if(!('Notification' in window)) return 'Questo telefono non mostra notifiche da qui.';
+    if(Notification.permission === 'denied') return 'Le notifiche sono bloccate. Si riattivano dalle impostazioni del telefono.';
+    if(remindOn()) return 'Attivi. Il giorno prima, verso le 18, arriva l’avviso dei fornitori di domani.';
+    return 'Non ancora attivi.';
+  }
+  function urlBase64ToUint8Array(base64){
+    var padding = '='.repeat((4 - base64.length % 4) % 4);
+    var raw = atob((base64 + padding).replace(/-/g, '+').replace(/_/g, '/'));
+    var out = new Uint8Array(raw.length);
+    for(var i=0;i<raw.length;i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+  function enableReminders(){
+    if(!('Notification' in window) || !('serviceWorker' in navigator)){
+      alert('Da questo telefono non si possono attivare i promemoria. Aggiungi Ordini alla schermata Home e riprova.');
+      return;
+    }
+    Notification.requestPermission().then(function(perm){
+      if(perm !== 'granted'){ render(); return; }
+      try{ localStorage.setItem('ordini-promemoria', '1'); }catch(e){}
+      syncReminders().then(function(){ render(); });
+    });
+  }
+  function syncReminders(){
+    if(!remindOn() || !('serviceWorker' in navigator)) return Promise.resolve();
+    return fetch('/api/promemoria').then(function(r){ return r.json(); }).then(function(info){
+      if(!info || !info.publicKey) return;
+      return navigator.serviceWorker.ready.then(function(reg){
+        return reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(info.publicKey)
+        });
+      }).then(function(sub){
+        return fetch('/api/promemoria', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subscription: sub.toJSON(), fornitori: remindSchedule() })
+        });
+      });
+    }).catch(function(){});
+  }
+  if(remindOn()) syncReminders();
 
   render();
 })();
