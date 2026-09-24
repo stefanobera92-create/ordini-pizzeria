@@ -34,7 +34,14 @@
   }
   // ogni fornitore ha un colore suo e le iniziali, come i contatti del telefono
   var BADGE_COLORS = ['#b23a2e','#2f6b73','#a8661c','#5b4a8a','#45573a','#8a3b5e','#3f5f8a','#b5572f','#6b6a2a','#7a4a2e'];
-  var SUPPLIER_COLOR = { viera:0, comit:1, alambra:2, emicela:3, indiano:4, aral:5, panaderia:6, herbania:7, barril:8 };
+  var SUPPLIER_COLOR = { cafe:9, coca:4, comit:1, emicela:3, panaderia:6, herbania:7, viera:0, kalise:8, aral:5, alambra:2, indiano:4, barril:8 };
+  // ordine del foglietto: da mangiare, detersivi, da bere
+  var SUPPLIER_ORDER = ['cafe','coca','comit','emicela','panaderia','herbania','viera','kalise','aral','alambra','indiano','barril'];
+  var SUPPLIER_PHONES = {
+    cafe:'663888355', emicela:'682648689', panaderia:'648936192', herbania:'659923500',
+    viera:'616413255', kalise:'641320404', aral:'657511475', alambra:'608668668',
+    indiano:'651257779', barril:'651257779'
+  };
   function badgeColor(id){
     if(SUPPLIER_COLOR[id] !== undefined) return BADGE_COLORS[SUPPLIER_COLOR[id]];
     var h = 0; for(var i=0;i<id.length;i++) h = (h*31 + id.charCodeAt(i)) >>> 0;
@@ -75,28 +82,28 @@
       tab: 'fornitori', view: 'fornitori',
       currentSupplierId: null, settingsOpenId: null,
       suppliers: [
-        { id:'viera', nome:'Viera', telefono:'', giorniOrdine:[5],
-          prodotti:[
-            {id:'v1', nome:'Cornetti'}, {id:'v2', nome:'Napolitane'}, {id:'v3', nome:'Donut'},
-            {id:'v4', nome:'Prosciutto cotto'}, {id:'v5', nome:'Bacon'}, {id:'v6', nome:'Serrano'},
-            {id:'v7', nome:'Nata'}
-          ] },
+        { id:'cafe', nome:'Cafe', telefono:normPhone('663888355'), giorniOrdine:[], prodotti:[] },
+        { id:'coca', nome:'Coca', telefono:'', giorniOrdine:[], prodotti:[] },
         { id:'comit', nome:'Comit (Moreno)', telefono:'', giorniOrdine:[1,3], consegne:{1:2, 3:4},
           prodotti:[
             {id:'c1', nome:'Mozzarella'}, {id:'c2', nome:'Salame'}, {id:'c3', nome:'Spianata'},
             {id:'c4', nome:'Farina'}, {id:'c5', nome:'Spolvero'}, {id:'c6', nome:'Gorgonzola'},
             {id:'c7', nome:'Pomodoro'}, {id:'c8', nome:'Cartoni pizza'}
           ] },
-        { id:'alambra', nome:'Alambra', telefono:'', giorniOrdine:[1,4], consegne:{1:2, 4:5},
-          prodotti:[ {id:'al1', nome:'San Miguel'}, {id:'al2', nome:'Alhambra'}, {id:'al3', nome:'IPA'} ] },
-        { id:'emicela', nome:'Emicela', telefono:'', giorniOrdine:[1,3],
+        { id:'emicela', nome:'Emicela', telefono:normPhone('682648689'), giorniOrdine:[1,3],
           prodotti:[ {id:'em1', nome:'Pollo'}, {id:'em2', nome:'Formaggio gouda'}, {id:'em3', nome:'Latte'} ] },
-        { id:'indiano', nome:'Indiano', telefono:'', giorniOrdine:[],
+        { id:'panaderia', nome:'Panaderia (Torte)', telefono:normPhone('648936192'), giorniOrdine:[],
+          prodotti:[ {id:'pn1', nome:'Cocco'}, {id:'pn2', nome:'Chocolate'}, {id:'pn3', nome:'Zanahoria'} ] },
+        { id:'herbania', nome:'Herbania Surgelati', telefono:normPhone('659923500'), giorniOrdine:[],
+          prodotti:[ {id:'he1', nome:'Salmone'} ] },
+        { id:'viera', nome:'Viera', telefono:normPhone('616413255'), giorniOrdine:[5],
           prodotti:[
-            {id:'in1', nome:'Barril'}, {id:'in2', nome:'Bombola gas'}, {id:'in3', nome:'Magners'},
-            {id:'in4', nome:'Strongbow'}, {id:'in5', nome:'Topping cocco'}
+            {id:'v1', nome:'Cornetti'}, {id:'v2', nome:'Napolitane'}, {id:'v3', nome:'Donut'},
+            {id:'v4', nome:'Prosciutto cotto'}, {id:'v5', nome:'Bacon'}, {id:'v6', nome:'Serrano'},
+            {id:'v7', nome:'Nata'}
           ] },
-        { id:'aral', nome:'Aral (Detersivi)', telefono:'', giorniOrdine:[1,2,3,4], giorniConsegna:[1,2,3,4,5],
+        { id:'kalise', nome:'Kalise', telefono:normPhone('641320404'), giorniOrdine:[], prodotti:[] },
+        { id:'aral', nome:'Aral (Detersivi)', telefono:normPhone('657511475'), giorniOrdine:[1,2,3,4], giorniConsegna:[1,2,3,4,5],
           prodotti:[
             {id:'ar1', nome:'Sacchi 120L'}, {id:'ar2', nome:'Bicchieri 0.7 + Tappi 0.7'},
             {id:'ar3', nome:'Bicchieri 0.4 + Tappi 0.4'}, {id:'ar4', nome:'Film trasparente'},
@@ -106,11 +113,14 @@
             {id:'ar11', nome:'Buste di carta'}, {id:'ar12', nome:'Buste con manici medie'},
             {id:'ar13', nome:'Buste con manici piccole'}, {id:'ar14', nome:'Buste trasparenti'}
           ] },
-        { id:'panaderia', nome:'Panaderia (Torte)', telefono:'', giorniOrdine:[],
-          prodotti:[ {id:'pn1', nome:'Cocco'}, {id:'pn2', nome:'Chocolate'}, {id:'pn3', nome:'Zanahoria'} ] },
-        { id:'herbania', nome:'Herbania Surgelati', telefono:'', giorniOrdine:[],
-          prodotti:[ {id:'he1', nome:'Salmone'} ] },
-        { id:'barril', nome:'Barril', telefono:'', giorniOrdine:[1,4], consegne:{1:2, 4:5},
+        { id:'alambra', nome:'Alambra', telefono:normPhone('608668668'), giorniOrdine:[1,4], consegne:{1:2, 4:5},
+          prodotti:[ {id:'al1', nome:'San Miguel'}, {id:'al2', nome:'Alhambra'}, {id:'al3', nome:'IPA'} ] },
+        { id:'indiano', nome:'Indiano', telefono:normPhone('651257779'), giorniOrdine:[],
+          prodotti:[
+            {id:'in1', nome:'Barril'}, {id:'in2', nome:'Bombola gas'}, {id:'in3', nome:'Magners'},
+            {id:'in4', nome:'Strongbow'}, {id:'in5', nome:'Topping cocco'}
+          ] },
+        { id:'barril', nome:'Barril', telefono:normPhone('651257779'), giorniOrdine:[1,4], consegne:{1:2, 4:5},
           prodotti:[ {id:'ba1', nome:'Birra alla spina'}, {id:'ba2', nome:'Senza alcol'}, {id:'ba3', nome:'Tostada'} ] }
       ],
       drafts: {},
@@ -261,6 +271,19 @@
       });
     });
     savedState.knownDefaults = known;
+
+    savedState.suppliers.forEach(function(s){
+      if(!s.telefono && SUPPLIER_PHONES[s.id]) s.telefono = normPhone(SUPPLIER_PHONES[s.id]);
+    });
+    var rank = {};
+    SUPPLIER_ORDER.forEach(function(id, i){ rank[id] = i; });
+    savedState.suppliers.sort(function(a, b){
+      var ra = rank[a.id], rb = rank[b.id];
+      if(ra === undefined && rb === undefined) return 0;
+      if(ra === undefined) return 1;
+      if(rb === undefined) return -1;
+      return ra - rb;
+    });
   }
   function save(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
   function getDraft(supplierId){
