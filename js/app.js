@@ -370,6 +370,13 @@
   // lingua del messaggio WhatsApp: spagnolo se non impostata
   function langOf(s){ return s.lingua === 'it' ? 'it' : 'es'; }
   function hasPhone(s){ return !!(s.telefono && s.telefono.length > 5); }
+  function phoneLabel(s){
+    if(!hasPhone(s)) return '';
+    var n = String(s.telefono);
+    if(n.indexOf('34') === 0 && n.length === 11) n = n.slice(2);
+    if(n.length === 9) return n.slice(0,3)+' '+n.slice(3,5)+' '+n.slice(5,7)+' '+n.slice(7);
+    return n;
+  }
   // senza numero WhatsApp apre la scelta del contatto: lo chiediamo qui, una volta sola
   function renderPhoneAsk(s){
     if(hasPhone(s)) return '';
@@ -454,7 +461,9 @@
       var daysTxt = scheduleLabel(s);
       return '<button class="supplier-row'+(isToday?' today':'')+'" data-open-supplier="'+s.id+'">'+
         supplierBadge(s)+
-        '<div class="supplier-body"><div class="supplier-name">'+esc(s.nome)+'</div><div class="supplier-days">'+daysTxt+(hasPhone(s)?'':' · <span class="no-phone">senza numero</span>')+'</div></div>'+
+        '<div class="supplier-body"><div class="supplier-name">'+esc(s.nome)+'</div>'+
+        (hasPhone(s) ? '<div class="supplier-phone">'+esc(phoneLabel(s))+'</div>' : '')+
+        '<div class="supplier-days">'+daysTxt+(hasPhone(s)?'':' · <span class="no-phone">senza numero</span>')+'</div></div>'+
         ((hasDraft || isToday) ? '<div class="supplier-tags">'+
           (isToday ? '<span class="tag today">Oggi</span>' : '') +
           (hasDraft ? '<span class="tag draft">'+draftCount+(draftCount===1?' articolo':' articoli')+'</span>' : '') +
