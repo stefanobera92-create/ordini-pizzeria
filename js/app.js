@@ -68,6 +68,7 @@
     ar10:'Vasos smoothie + tapas',
     ar11:'Bolsa de papel', ar12:'Bolsa con asa media', ar13:'Bolsa con asa pequeña', ar14:'Bolsa transparente',
     cf1:'Café', cf2:'Café descafeinado',
+    cf3:'Descafeinado de sobre', cf4:'Azúcar blanco o moreno',
     cc4:'Nestlé Limón', cc6:'Piña',
     pn1:'Coco', he1:'Salmón',
     ba1:'Cerveza de barril', ba2:'Sin alcohol'
@@ -85,7 +86,10 @@
       currentSupplierId: null, settingsOpenId: null,
       suppliers: [
         { id:'cafe', nome:'Cafe', telefono:normPhone('663888355'), giorniOrdine:[],
-          prodotti:[ {id:'cf1', nome:'Caffè'}, {id:'cf2', nome:'Caffè decaffeinato'} ] },
+          prodotti:[
+            {id:'cf1', nome:'Caffè'}, {id:'cf2', nome:'Caffè decaffeinato'},
+            {id:'cf3', nome:'Decaffeinato in bustina'}, {id:'cf4', nome:'Zucchero bianco o moreno'}
+          ] },
         { id:'coca', nome:'Coca-Cola', telefono:'', giorniOrdine:[],
           prodotti:[
             {id:'cc1', nome:'Coca-Cola'}, {id:'cc2', nome:'Coca-Cola Zero'}, {id:'cc3', nome:'Fanta'},
