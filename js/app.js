@@ -38,7 +38,7 @@
   // ordine del foglietto: da mangiare, detersivi, da bere
   var SUPPLIER_ORDER = ['cafe','coca','comit','emicela','panaderia','herbania','viera','kalise','aral','alambra','indiano','barril'];
   var SUPPLIER_PHONES = {
-    cafe:'663888355', emicela:'682648689', panaderia:'648936192', herbania:'659923500',
+    cafe:'663888355', comit:'685842100', emicela:'682648689', panaderia:'648936192', herbania:'659923500',
     viera:'616413255', kalise:'641320404', aral:'657511475', alambra:'608668668',
     indiano:'651257779', barril:'651257779'
   };
@@ -67,6 +67,7 @@
     ar7:'Bandejas de aluminio + tapas', ar8:'Paletinas de madera', ar9:'PET transparente',
     ar10:'Vasos smoothie + tapas',
     ar11:'Bolsa de papel', ar12:'Bolsa con asa media', ar13:'Bolsa con asa pequeña', ar14:'Bolsa transparente',
+    cf1:'Café', cf2:'Café descafeinado',
     pn1:'Coco', he1:'Salmón',
     ba1:'Cerveza de barril', ba2:'Sin alcohol'
   };
@@ -82,9 +83,10 @@
       tab: 'fornitori', view: 'fornitori',
       currentSupplierId: null, settingsOpenId: null,
       suppliers: [
-        { id:'cafe', nome:'Cafe', telefono:normPhone('663888355'), giorniOrdine:[], prodotti:[] },
+        { id:'cafe', nome:'Cafe', telefono:normPhone('663888355'), giorniOrdine:[],
+          prodotti:[ {id:'cf1', nome:'Caffè'}, {id:'cf2', nome:'Caffè decaffeinato'} ] },
         { id:'coca', nome:'Coca', telefono:'', giorniOrdine:[], prodotti:[] },
-        { id:'comit', nome:'Comit (Moreno)', telefono:'', giorniOrdine:[1,3], consegne:{1:2, 3:4},
+        { id:'comit', nome:'Comit (Moreno)', telefono:normPhone('685842100'), giorniOrdine:[1,3], consegne:{1:2, 3:4},
           prodotti:[
             {id:'c1', nome:'Mozzarella'}, {id:'c2', nome:'Salame'}, {id:'c3', nome:'Spianata'},
             {id:'c4', nome:'Farina'}, {id:'c5', nome:'Spolvero'}, {id:'c6', nome:'Gorgonzola'},
@@ -370,6 +372,13 @@
   // lingua del messaggio WhatsApp: spagnolo se non impostata
   function langOf(s){ return s.lingua === 'it' ? 'it' : 'es'; }
   function hasPhone(s){ return !!(s.telefono && s.telefono.length > 5); }
+  function phoneLabel(s){
+    if(!hasPhone(s)) return '';
+    var n = String(s.telefono);
+    if(n.indexOf('34') === 0 && n.length === 11) n = n.slice(2);
+    if(n.length === 9) return n.slice(0,3)+' '+n.slice(3,5)+' '+n.slice(5,7)+' '+n.slice(7);
+    return n;
+  }
   // senza numero WhatsApp apre la scelta del contatto: lo chiediamo qui, una volta sola
   function renderPhoneAsk(s){
     if(hasPhone(s)) return '';
@@ -454,7 +463,9 @@
       var daysTxt = scheduleLabel(s);
       return '<button class="supplier-row'+(isToday?' today':'')+'" data-open-supplier="'+s.id+'">'+
         supplierBadge(s)+
-        '<div class="supplier-body"><div class="supplier-name">'+esc(s.nome)+'</div><div class="supplier-days">'+daysTxt+(hasPhone(s)?'':' · <span class="no-phone">senza numero</span>')+'</div></div>'+
+        '<div class="supplier-body"><div class="supplier-name">'+esc(s.nome)+'</div>'+
+        (hasPhone(s) ? '<div class="supplier-phone">'+esc(phoneLabel(s))+'</div>' : '')+
+        '<div class="supplier-days">'+daysTxt+(hasPhone(s)?'':' · <span class="no-phone">senza numero</span>')+'</div></div>'+
         ((hasDraft || isToday) ? '<div class="supplier-tags">'+
           (isToday ? '<span class="tag today">Oggi</span>' : '') +
           (hasDraft ? '<span class="tag draft">'+draftCount+(draftCount===1?' articolo':' articoli')+'</span>' : '') +
