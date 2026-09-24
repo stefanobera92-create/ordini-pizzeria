@@ -80,7 +80,16 @@ svg.icn{ width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1
 }
 .icon-btn:active{ transform:scale(.92); }
 .back-row{ display:flex; align-items:center; gap:12px; }
-.back-row .brand-name{ font-size:1.25rem; }
+.back-row .brand-name{ flex:1; min-width:0; font-size:1.25rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bar-link{
+  border:none; background:transparent; color:var(--tomato); font-weight:800;
+  font-size:.95rem; padding:8px 2px; cursor:pointer; flex:none;
+}
+.remind-banner{
+  background:color-mix(in srgb, var(--gold) 16%, var(--card));
+  border:1px solid var(--gold); border-radius:14px; padding:12px 14px; margin:0 0 12px;
+  font-weight:700; font-size:.92rem; line-height:1.4;
+}
 
 /* screens */
 .screens{ flex:1; padding:16px 18px 26px; }

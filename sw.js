@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ordini-pizzeria-v7';
+const CACHE_NAME = 'ordini-pizzeria-v10';
 const ASSETS = [
   './',
   './index.html',
@@ -24,6 +24,27 @@ self.addEventListener('activate', function(event){
     })
   );
   self.clients.claim();
+});
+
+self.addEventListener('push', function(event){
+  var data = {};
+  try{ data = event.data ? event.data.json() : {}; }catch(e){}
+  event.waitUntil(self.registration.showNotification(data.title || 'Ordini', {
+    body: data.body || 'Domani c’è un ordine da fare.',
+    icon: 'icons/icon-192.png',
+    badge: 'icons/icon-192.png',
+    data: { url: './' }
+  }));
+});
+
+self.addEventListener('notificationclick', function(event){
+  event.notification.close();
+  event.waitUntil(self.clients.matchAll({ type:'window', includeUncontrolled:true }).then(function(list){
+    for(var i=0;i<list.length;i++){
+      if('focus' in list[i]) return list[i].focus();
+    }
+    if(self.clients.openWindow) return self.clients.openWindow('./');
+  }));
 });
 
 // Prima la rete (così un nuovo deploy su Netlify arriva subito), la cache solo offline.
