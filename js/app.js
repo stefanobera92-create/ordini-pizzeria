@@ -33,8 +33,8 @@
     return '<svg class="icn" viewBox="0 0 24 24">'+(paths[name]||paths.pizza)+'</svg>';
   }
   // ogni fornitore ha un colore suo e le iniziali, come i contatti del telefono
-  var BADGE_COLORS = ['#b23a2e','#2f6b73','#a8661c','#5b4a8a','#45573a','#8a3b5e','#3f5f8a','#b5572f','#6b6a2a','#7a4a2e'];
-  var SUPPLIER_COLOR = { cafe:9, coca:4, comit:1, emicela:3, panaderia:6, herbania:7, viera:0, kalise:8, aral:5, alambra:2, indiano:4, barril:8 };
+  var BADGE_COLORS = ['#b23a2e','#2f6b73','#a8661c','#5b4a8a','#45573a','#8a3b5e','#3f5f8a','#b5572f','#6b6a2a','#7a4a2e','#3d6b4f','#6a3f6b'];
+  var SUPPLIER_COLOR = { cafe:9, coca:10, comit:1, emicela:3, panaderia:6, herbania:7, viera:0, kalise:11, aral:5, alambra:2, indiano:4, barril:8 };
   // ordine del foglietto: da mangiare, detersivi, da bere
   var SUPPLIER_ORDER = ['cafe','coca','comit','emicela','panaderia','herbania','viera','kalise','aral','alambra','indiano','barril'];
   var SUPPLIER_PHONES = {
@@ -282,9 +282,13 @@
     });
     savedState.knownDefaults = known;
 
-    savedState.suppliers.forEach(function(s){
-      if(!s.telefono && SUPPLIER_PHONES[s.id]) s.telefono = normPhone(SUPPLIER_PHONES[s.id]);
-    });
+    // una volta sola: se poi si cancella un numero, non deve ricomparire all'apertura
+    if(!savedState.migratedSupplierPhones){
+      savedState.suppliers.forEach(function(s){
+        if(!s.telefono && SUPPLIER_PHONES[s.id]) s.telefono = normPhone(SUPPLIER_PHONES[s.id]);
+      });
+      savedState.migratedSupplierPhones = true;
+    }
     var rank = {};
     SUPPLIER_ORDER.forEach(function(id, i){ rank[id] = i; });
     savedState.suppliers.sort(function(a, b){
@@ -411,12 +415,18 @@
   }
   function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
+  var lastScreen = '';
   function render(){
     save();
     var app = document.getElementById('app');
+    var screenKey = state.view + '|' + state.tab + '|' + (state.currentSupplierId || '');
+    var keepScroll = screenKey === lastScreen;
+    var scrollY = keepScroll ? window.scrollY : 0;
+    lastScreen = screenKey;
     var pushed = state.view === 'order' || state.view === 'summary';
     var screen = renderScreen();
     app.innerHTML = '<div class="app-shell">' + renderBar() + '<div class="screens">' + screen + '</div>' + (pushed ? '' : renderNav()) + '</div>';
+    if(keepScroll) window.scrollTo(0, scrollY);
     bindEvents();
   }
 
@@ -978,7 +988,8 @@
     var data = {
       app: 'ordini-pizzeria', versione: 1, esportatoIl: new Date().toISOString(),
       suppliers: state.suppliers, drafts: state.drafts, lastOrders: state.lastOrders, knownDefaults: state.knownDefaults,
-      migratedRealSuppliers: state.migratedRealSuppliers
+      migratedRealSuppliers: state.migratedRealSuppliers, migratedAralDays: state.migratedAralDays,
+      migratedDeliverySchedule: state.migratedDeliverySchedule, migratedSupplierPhones: state.migratedSupplierPhones
     };
     var name = 'ordini-pizzeria-backup-' + new Date().toISOString().slice(0,10) + '.json';
     var blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
@@ -1006,7 +1017,11 @@
     state.drafts = (data.drafts && typeof data.drafts === 'object') ? data.drafts : {};
     state.lastOrders = (data.lastOrders && typeof data.lastOrders === 'object') ? data.lastOrders : {};
     if(Array.isArray(data.knownDefaults)) state.knownDefaults = data.knownDefaults;
-    state.migratedRealSuppliers = true;
+    state.migratedRealSuppliers = data.migratedRealSuppliers !== false;
+    if(data.migratedAralDays) state.migratedAralDays = true;
+    if(data.migratedDeliverySchedule) state.migratedDeliverySchedule = true;
+    if(data.migratedSupplierPhones) state.migratedSupplierPhones = true;
+    mergeNewDefaults(state);
     state.settingsOpenId = null;
     render();
     alert('Backup importato.');
