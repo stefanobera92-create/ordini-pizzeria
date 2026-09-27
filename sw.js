@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ordini-pizzeria-v12';
+const CACHE_NAME = 'ordini-pizzeria-v13';
 const ASSETS = [
   './',
   './index.html',

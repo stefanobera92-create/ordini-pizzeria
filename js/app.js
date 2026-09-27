@@ -34,13 +34,18 @@
   }
   // ogni fornitore ha un colore suo e le iniziali, come i contatti del telefono
   var BADGE_COLORS = ['#b23a2e','#2f6b73','#a8661c','#5b4a8a','#45573a','#8a3b5e','#3f5f8a','#b5572f','#6b6a2a','#7a4a2e','#3d6b4f','#6a3f6b'];
-  var SUPPLIER_COLOR = { cafe:9, coca:10, comit:1, emicela:3, panaderia:6, herbania:7, viera:0, kalise:11, aral:5, alambra:2, indiano:4, barril:8 };
+  var SUPPLIER_COLOR = { cafe:9, coca:10, comit:1, emicela:3, panaderia:6, herbania:7, viera:0, kalise:11, aral:5, alambra:2, indiano:4, barril:8, agrocash:1 };
   // ordine del foglietto: da mangiare, detersivi, da bere
-  var SUPPLIER_ORDER = ['cafe','coca','comit','emicela','panaderia','herbania','viera','kalise','aral','alambra','indiano','barril'];
+  var SUPPLIER_ORDER = ['cafe','coca','comit','emicela','panaderia','herbania','viera','kalise','aral','alambra','indiano','barril','agrocash'];
   var SUPPLIER_PHONES = {
-    cafe:'663888355', comit:'685842100', emicela:'682648689', panaderia:'648936192', herbania:'659923500',
-    viera:'616413255', kalise:'641320404', aral:'657511475', alambra:'608668668',
-    indiano:'651257779', barril:'651257779'
+    cafe:'633887355', comit:'687842179', emicela:'622649689', panaderia:'648936192', herbania:'659923500',
+    viera:'616412255', kalise:'691020901', aral:'657514475', alambra:'628686568',
+    indiano:'646915350', barril:'661267979'
+  };
+  // numeri vecchi: se l'utente non li ha cambiati, vengono aggiornati a quelli nuovi
+  var OLD_SUPPLIER_PHONES = {
+    cafe:'663888355', comit:'685842100', emicela:'682648689', viera:'616413255', kalise:'641320404',
+    aral:'657511475', alambra:'608668668', indiano:'651257779', barril:'651257779'
   };
   function badgeColor(id){
     if(SUPPLIER_COLOR[id] !== undefined) return BADGE_COLORS[SUPPLIER_COLOR[id]];
@@ -67,6 +72,7 @@
     ar7:'Bandejas de aluminio + tapas', ar8:'Paletinas de madera', ar9:'PET transparente',
     ar10:'Vasos smoothie + tapas',
     ar11:'Bolsa de papel', ar12:'Bolsa con asa media', ar13:'Bolsa con asa pequeña', ar14:'Bolsa transparente',
+    ar15:'Det. lavavajillas brillantante', ar16:'Det. platos', ar17:'Pajitas negras', ar18:'Cerillas',
     cf1:'Café', cf2:'Café descafeinado',
     cf3:'Descafeinado de sobre', cf4:'Azúcar blanco o moreno',
     cc4:'Nestlé Limón', cc6:'Piña',
@@ -85,7 +91,7 @@
       tab: 'fornitori', view: 'fornitori',
       currentSupplierId: null, settingsOpenId: null,
       suppliers: [
-        { id:'cafe', nome:'Cafe', telefono:normPhone('663888355'), giorniOrdine:[],
+        { id:'cafe', nome:'Cafe', telefono:normPhone('633887355'), giorniOrdine:[],
           prodotti:[
             {id:'cf1', nome:'Caffè'}, {id:'cf2', nome:'Caffè decaffeinato'},
             {id:'cf3', nome:'Decaffeinato in bustina'}, {id:'cf4', nome:'Zucchero bianco o moreno'}
@@ -96,26 +102,26 @@
             {id:'cc4', nome:'Nestlé Limone'}, {id:'cc5', nome:'Nestlé Mango'}, {id:'cc6', nome:'Pigna'},
             {id:'cc7', nome:'Sprite'}
           ] },
-        { id:'comit', nome:'Comit (Moreno)', telefono:normPhone('685842100'), giorniOrdine:[1,3], consegne:{1:2, 3:4},
+        { id:'comit', nome:'Comit (Moreno)', telefono:normPhone('687842179'), giorniOrdine:[1,3], consegne:{1:2, 3:4},
           prodotti:[
             {id:'c1', nome:'Mozzarella'}, {id:'c2', nome:'Salame'}, {id:'c3', nome:'Spianata'},
             {id:'c4', nome:'Farina'}, {id:'c5', nome:'Spolvero'}, {id:'c6', nome:'Gorgonzola'},
             {id:'c7', nome:'Pomodoro'}, {id:'c8', nome:'Cartoni pizza'}
           ] },
-        { id:'emicela', nome:'Emicela', telefono:normPhone('682648689'), giorniOrdine:[1,3],
+        { id:'emicela', nome:'Emicela', telefono:normPhone('622649689'), giorniOrdine:[1,3],
           prodotti:[ {id:'em1', nome:'Pollo'}, {id:'em2', nome:'Formaggio gouda'}, {id:'em3', nome:'Latte'} ] },
         { id:'panaderia', nome:'Panaderia (Torte)', telefono:normPhone('648936192'), giorniOrdine:[],
           prodotti:[ {id:'pn1', nome:'Cocco'}, {id:'pn2', nome:'Chocolate'}, {id:'pn3', nome:'Zanahoria'} ] },
         { id:'herbania', nome:'Herbania Surgelati', telefono:normPhone('659923500'), giorniOrdine:[],
           prodotti:[ {id:'he1', nome:'Salmone'} ] },
-        { id:'viera', nome:'Viera', telefono:normPhone('616413255'), giorniOrdine:[5],
+        { id:'viera', nome:'Viera', telefono:normPhone('616412255'), giorniOrdine:[5],
           prodotti:[
             {id:'v1', nome:'Cornetti'}, {id:'v2', nome:'Napolitane'}, {id:'v3', nome:'Donut'},
             {id:'v4', nome:'Prosciutto cotto'}, {id:'v5', nome:'Bacon'}, {id:'v6', nome:'Serrano'},
             {id:'v7', nome:'Nata'}
           ] },
-        { id:'kalise', nome:'Kalise', telefono:normPhone('641320404'), giorniOrdine:[], prodotti:[] },
-        { id:'aral', nome:'Aral (Detersivi)', telefono:normPhone('657511475'), giorniOrdine:[1,2,3,4], giorniConsegna:[1,2,3,4,5],
+        { id:'kalise', nome:'Kalise', telefono:normPhone('691020901'), giorniOrdine:[], prodotti:[] },
+        { id:'aral', nome:'Aral (Detersivi)', telefono:normPhone('657514475'), giorniOrdine:[1,2,3,4], giorniConsegna:[1,2,3,4,5],
           prodotti:[
             {id:'ar1', nome:'Sacchi 120L'}, {id:'ar2', nome:'Bicchieri 0.7 + Tappi 0.7'},
             {id:'ar3', nome:'Bicchieri 0.4 + Tappi 0.4'}, {id:'ar4', nome:'Film trasparente'},
@@ -123,17 +129,36 @@
             {id:'ar7', nome:'Bandeja alluminio + coperchi'}, {id:'ar8', nome:'Palettine legno'},
             {id:'ar9', nome:'PET trasparente'}, {id:'ar10', nome:'Vaso smoothie + coperchi'},
             {id:'ar11', nome:'Buste di carta'}, {id:'ar12', nome:'Buste con manici medie'},
-            {id:'ar13', nome:'Buste con manici piccole'}, {id:'ar14', nome:'Buste trasparenti'}
+            {id:'ar13', nome:'Buste con manici piccole'}, {id:'ar14', nome:'Buste trasparenti'},
+            {id:'ar15', nome:'Brillantante lavastoviglie'}, {id:'ar16', nome:'Detersivo piatti'},
+            {id:'ar17', nome:'Cannucce nere'}, {id:'ar18', nome:'Fiammiferi'}
           ] },
-        { id:'alambra', nome:'Alambra', telefono:normPhone('608668668'), giorniOrdine:[1,4], consegne:{1:2, 4:5},
+        { id:'alambra', nome:'Alambra', telefono:normPhone('628686568'), giorniOrdine:[1,4], consegne:{1:2, 4:5},
           prodotti:[ {id:'al1', nome:'San Miguel'}, {id:'al2', nome:'Alhambra'}, {id:'al3', nome:'IPA'} ] },
-        { id:'indiano', nome:'Indiano', telefono:normPhone('651257779'), giorniOrdine:[],
+        { id:'indiano', nome:'Indiano', telefono:normPhone('646915350'), giorniOrdine:[],
           prodotti:[
             {id:'in1', nome:'Barril'}, {id:'in2', nome:'Bombola gas'}, {id:'in3', nome:'Magners'},
             {id:'in4', nome:'Strongbow'}, {id:'in5', nome:'Topping cocco'}
           ] },
-        { id:'barril', nome:'Barril', telefono:normPhone('651257779'), giorniOrdine:[1,4], consegne:{1:2, 4:5},
-          prodotti:[ {id:'ba1', nome:'Birra alla spina'}, {id:'ba2', nome:'Senza alcol'}, {id:'ba3', nome:'Tostada'} ] }
+        { id:'barril', nome:'Barril', telefono:normPhone('661267979'), giorniOrdine:[1,4], consegne:{1:2, 4:5},
+          prodotti:[ {id:'ba1', nome:'Birra alla spina'}, {id:'ba2', nome:'Senza alcol'}, {id:'ba3', nome:'Tostada'} ] },
+        // cash & carry: lista della spesa da fare di persona, senza numero
+        { id:'agrocash', nome:'Agro Cash (Spesa)', telefono:'', lingua:'it', giorniOrdine:[],
+          prodotti:[
+            {id:'ag1', nome:'Tonno'}, {id:'ag20', nome:'Nutella'},
+            {id:'ag18', nome:'Ketchup in bustine'}, {id:'ag19', nome:'Maionese 5L'},
+            {id:'ag10', nome:'Topping dulce de leche'}, {id:'ag11', nome:'Topping cioccolato'},
+            {id:'ag12', nome:'Topping vaniglia'}, {id:'ag13', nome:'Topping fragola'},
+            {id:'ag21', nome:'Acqua senza gas'},
+            {id:'ag2', nome:'Kahlua'}, {id:'ag3', nome:'J&B'}, {id:'ag4', nome:'Tia Maria'},
+            {id:'ag5', nome:'Jameson'}, {id:'ag6', nome:'Veterano'}, {id:'ag7', nome:'Liquore 43'},
+            {id:'ag8', nome:'Grappa'}, {id:'ag9', nome:'Sambuca'}, {id:'ag14', nome:'Amaretto'},
+            {id:'ag15', nome:'Martini Rosso'}, {id:'ag16', nome:'Martini Bianco'}, {id:'ag17', nome:'Martini Dry'},
+            {id:'ag22', nome:'Aperol'}, {id:'ag23', nome:'Campari'},
+            {id:'ag24', nome:'Arehucas Bianco'}, {id:'ag25', nome:'Arehucas Scuro'},
+            {id:'ag26', nome:'Gordon Gin'}, {id:'ag27', nome:'Tanqueray Gin'},
+            {id:'ag28', nome:'Vodka'}, {id:'ag29', nome:'Tequila'}
+          ] }
       ],
       drafts: {},
       lastOrders: {}
@@ -292,6 +317,14 @@
         if(!s.telefono && SUPPLIER_PHONES[s.id]) s.telefono = normPhone(SUPPLIER_PHONES[s.id]);
       });
       savedState.migratedSupplierPhones = true;
+    }
+    // numeri corretti (settembre 2026): cambia solo quelli rimasti al vecchio valore di default
+    if(!savedState.migratedSupplierPhonesV2){
+      savedState.suppliers.forEach(function(s){
+        var old = OLD_SUPPLIER_PHONES[s.id];
+        if(old && s.telefono === normPhone(old)) s.telefono = normPhone(SUPPLIER_PHONES[s.id]);
+      });
+      savedState.migratedSupplierPhonesV2 = true;
     }
     var rank = {};
     SUPPLIER_ORDER.forEach(function(id, i){ rank[id] = i; });
@@ -1021,7 +1054,8 @@
       app: 'ordini-pizzeria', versione: 1, esportatoIl: new Date().toISOString(),
       suppliers: state.suppliers, drafts: state.drafts, lastOrders: state.lastOrders, knownDefaults: state.knownDefaults,
       migratedRealSuppliers: state.migratedRealSuppliers, migratedAralDays: state.migratedAralDays,
-      migratedDeliverySchedule: state.migratedDeliverySchedule, migratedSupplierPhones: state.migratedSupplierPhones
+      migratedDeliverySchedule: state.migratedDeliverySchedule, migratedSupplierPhones: state.migratedSupplierPhones,
+      migratedSupplierPhonesV2: state.migratedSupplierPhonesV2
     };
     var name = 'ordini-pizzeria-backup-' + new Date().toISOString().slice(0,10) + '.json';
     var blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
@@ -1053,6 +1087,7 @@
     if(data.migratedAralDays) state.migratedAralDays = true;
     if(data.migratedDeliverySchedule) state.migratedDeliverySchedule = true;
     if(data.migratedSupplierPhones) state.migratedSupplierPhones = true;
+    if(data.migratedSupplierPhonesV2) state.migratedSupplierPhonesV2 = true;
     mergeNewDefaults(state);
     state.settingsOpenId = null;
     render();

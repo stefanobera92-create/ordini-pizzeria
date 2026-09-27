@@ -44,6 +44,12 @@ funziona solo servito via http/https, non da file://).
   `js/app.js`. Ogni volta che i prodotti di default sono stati aggiornati in una
   sessione precedente, `mergeNewDefaults()` fa da migrazione per chi ha già
   l'app installata, così non perde le proprie modifiche.
+- **Agro Cash (Spesa)**: non è un fornitore a cui si scrive, ma la lista della
+  spesa da fare di persona al cash & carry (liquori, toppings, salse, tonno…).
+  Messaggio in italiano e senza numero: si può condividere a chi va a fare la spesa.
+- I numeri di telefono dei fornitori stanno in `SUPPLIER_PHONES`; quando cambiano,
+  `OLD_SUPPLIER_PHONES` + la migrazione `migratedSupplierPhonesV2` aggiornano
+  chi ha già l'app, ma solo se il numero non era stato modificato a mano.
 
 ## Limiti noti / cosa manca
 - **Nessun invio realmente programmato**: l'app non può inviare messaggi in
