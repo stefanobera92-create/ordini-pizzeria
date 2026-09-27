@@ -91,7 +91,7 @@
       tab: 'fornitori', view: 'fornitori',
       currentSupplierId: null, settingsOpenId: null,
       suppliers: [
-        { id:'cafe', nome:'Cafe', telefono:normPhone('633887355'), giorniOrdine:[],
+        { id:'cafe', nome:'Cafe', telefono:normPhone('633887355'), giorniOrdine:[3,4], consegne:{3:4, 4:1},
           prodotti:[
             {id:'cf1', nome:'Caffè'}, {id:'cf2', nome:'Caffè decaffeinato'},
             {id:'cf3', nome:'Decaffeinato in bustina'}, {id:'cf4', nome:'Zucchero bianco o moreno'}
@@ -114,13 +114,13 @@
           prodotti:[ {id:'pn1', nome:'Cocco'}, {id:'pn2', nome:'Chocolate'}, {id:'pn3', nome:'Zanahoria'} ] },
         { id:'herbania', nome:'Herbania Surgelati', telefono:normPhone('659923500'), giorniOrdine:[],
           prodotti:[ {id:'he1', nome:'Salmone'} ] },
-        { id:'viera', nome:'Viera', telefono:normPhone('616412255'), giorniOrdine:[5],
+        { id:'viera', nome:'Viera', telefono:normPhone('616412255'), giorniOrdine:[1,5], consegne:{1:5, 5:1},
           prodotti:[
             {id:'v1', nome:'Cornetti'}, {id:'v2', nome:'Napolitane'}, {id:'v3', nome:'Donut'},
             {id:'v4', nome:'Prosciutto cotto'}, {id:'v5', nome:'Bacon'}, {id:'v6', nome:'Serrano'},
             {id:'v7', nome:'Nata'}
           ] },
-        { id:'kalise', nome:'Kalise', telefono:normPhone('691020901'), giorniOrdine:[], prodotti:[] },
+        { id:'kalise', nome:'Kalise', telefono:normPhone('691020901'), giorniOrdine:[5], consegne:{5:1}, prodotti:[] },
         { id:'aral', nome:'Aral (Detersivi)', telefono:normPhone('657514475'), giorniOrdine:[1,2,3,4], giorniConsegna:[1,2,3,4,5],
           prodotti:[
             {id:'ar1', nome:'Sacchi 120L'}, {id:'ar2', nome:'Bicchieri 0.7 + Tappi 0.7'},
@@ -260,6 +260,16 @@
         if(!beer.consegne) beer.consegne = {1:2, 4:5};
       });
       savedState.migratedDeliverySchedule = true;
+    }
+    // giorni di Cafe (mer→gio, gio→lun), Viera (lun→ven, ven→lun) e Kalise (ven→lun):
+    // solo se i giorni sono ancora quelli vecchi di default
+    if(!savedState.migratedDeliverySchedule2){
+      [['cafe', '', [3,4], {3:4, 4:1}], ['viera', '5', [1,5], {1:5, 5:1}], ['kalise', '', [5], {5:1}]].forEach(function(r){
+        var sup = savedState.suppliers.filter(function(x){ return x.id===r[0]; })[0];
+        if(!sup || sup.giorniOrdine.slice().sort().join(',') !== r[1] || sup.consegne) return;
+        sup.giorniOrdine = r[2]; sup.consegne = r[3];
+      });
+      savedState.migratedDeliverySchedule2 = true;
     }
 
     var RENAMES = [
@@ -1055,7 +1065,7 @@
       suppliers: state.suppliers, drafts: state.drafts, lastOrders: state.lastOrders, knownDefaults: state.knownDefaults,
       migratedRealSuppliers: state.migratedRealSuppliers, migratedAralDays: state.migratedAralDays,
       migratedDeliverySchedule: state.migratedDeliverySchedule, migratedSupplierPhones: state.migratedSupplierPhones,
-      migratedSupplierPhonesV2: state.migratedSupplierPhonesV2
+      migratedSupplierPhonesV2: state.migratedSupplierPhonesV2, migratedDeliverySchedule2: state.migratedDeliverySchedule2
     };
     var name = 'ordini-pizzeria-backup-' + new Date().toISOString().slice(0,10) + '.json';
     var blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
@@ -1088,6 +1098,7 @@
     if(data.migratedDeliverySchedule) state.migratedDeliverySchedule = true;
     if(data.migratedSupplierPhones) state.migratedSupplierPhones = true;
     if(data.migratedSupplierPhonesV2) state.migratedSupplierPhonesV2 = true;
+    if(data.migratedDeliverySchedule2) state.migratedDeliverySchedule2 = true;
     mergeNewDefaults(state);
     state.settingsOpenId = null;
     render();
