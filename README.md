@@ -51,6 +51,24 @@ funziona solo servito via http/https, non da file://).
   `OLD_SUPPLIER_PHONES` + la migrazione `migratedSupplierPhonesV2` aggiornano
   chi ha già l'app, ma solo se il numero non era stato modificato a mano.
 
+## Importazione dal Magazzino
+
+Magazzino Pizzeria può aprire questa app con delle quantità già pronte. Il link è:
+
+`<indirizzo>/#import=<payload>`
+
+`payload` è JSON in UTF-8, codificato in base64url senza `=` finale:
+
+```json
+{"v":1,"from":"magazzino","items":[{"supplier":"comit","product":"c1","qty":2,"name":"Mozzarella"}]}
+```
+
+`supplier` e `product` sono gli id già usati in `js/app.js`. `qty` è un intero positivo. `name` è facoltativo e serve solo se l’id non si trova.
+
+All’apertura, e se cambia l’hash, l’app mostra una conferma in italiano (quanti prodotti, per quali fornitori, e la lista). **Inserisci negli ordini** scrive quelle quantità nelle bozze (`state.drafts[fornitore].qty[prodotto]`), al posto della quantità di quei prodotti, e non tocca gli altri. Poi toglie l’hash con `history.replaceState`, così un ricaricamento non reimporta, e apre o evidenzia i fornitori toccati. **Annulla** non cambia nulla. Non parte nessun messaggio WhatsApp: si controlla e si invia da qui, come sempre.
+
+Id di fornitore o prodotto sconosciuti vengono saltati e elencati come «Non trovati» (con `name`, se c’è). Una quantità che non è un intero positivo viene saltata.
+
 ## Limiti noti / cosa manca
 - **Nessun invio realmente programmato**: l'app non può inviare messaggi in
   background da sola (è una pagina web statica, non un'app nativa con

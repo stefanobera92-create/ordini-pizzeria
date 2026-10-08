@@ -468,6 +468,173 @@
   }
   function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
+  // Conferma di un link dal Magazzino. Non sta nello stato salvato: un ricaricamento
+  // non deve ricordare la finestra, e le bozze cambiano solo dopo «Inserisci».
+  var pendingImport = null;
+  var importHits = { suppliers:{}, products:{} };
+
+  function positiveImportQty(n){
+    return typeof n === 'number' && isFinite(n) && n > 0 && Math.floor(n) === n;
+  }
+  function decodeBase64UrlUtf8(raw){
+    var padLen = (4 - (raw.length % 4)) % 4;
+    var b64 = raw.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice(0, padLen);
+    var bin = atob(b64);
+    var bytes = new Uint8Array(bin.length);
+    for(var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    if(typeof TextDecoder !== 'undefined') return new TextDecoder('utf-8', { fatal:true }).decode(bytes);
+    return decodeURIComponent(escape(bin));
+  }
+  function classifyMagazzinoItems(items){
+    var found = [], missing = [], skippedQty = [];
+    items.forEach(function(it){
+      if(!it || typeof it !== 'object'){
+        skippedQty.push({ name:'', supplier:'', product:'' });
+        return;
+      }
+      var supplierId = it.supplier == null ? '' : String(it.supplier);
+      var productId = it.product == null ? '' : String(it.product);
+      var name = it.name == null ? '' : String(it.name);
+      if(!positiveImportQty(it.qty)){
+        skippedQty.push({ name:name, supplier:supplierId, product:productId });
+        return;
+      }
+      var s = findSupplier(supplierId);
+      var p = s && s.prodotti.filter(function(x){ return x.id === productId; })[0];
+      if(!s || !p){
+        missing.push({ name:name, supplier:supplierId, product:productId });
+        return;
+      }
+      var prev = -1;
+      for(var i = 0; i < found.length; i++){
+        if(found[i].supplierId === supplierId && found[i].productId === productId) prev = i;
+      }
+      var row = {
+        supplierId:supplierId, productId:productId, qty:it.qty,
+        supplierName:s.nome, productName:p.nome, unit:p.unita || ''
+      };
+      if(prev > -1) found[prev] = row; else found.push(row);
+    });
+    return { error:false, found:found, missing:missing, skippedQty:skippedQty };
+  }
+  function readImportFromHash(){
+    var hash = location.hash || '';
+    if(hash.indexOf('#import=') !== 0) return null;
+    var raw = hash.slice('#import='.length);
+    try{ raw = decodeURIComponent(raw.replace(/\+/g, '%2B')); }catch(e){ return { error:true }; }
+    raw = raw.replace(/\s/g, '').replace(/=+$/g, '');
+    if(!raw) return { error:true };
+    var data;
+    try{ data = JSON.parse(decodeBase64UrlUtf8(raw)); }
+    catch(e){ return { error:true }; }
+    if(!data || typeof data !== 'object' || data.v !== 1 || data.from !== 'magazzino' || !Array.isArray(data.items)){
+      return { error:true };
+    }
+    return classifyMagazzinoItems(data.items);
+  }
+  function clearImportHash(){
+    if((location.hash || '').indexOf('#import=') !== 0) return;
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+  function importGroups(found){
+    var order = [], map = {};
+    found.forEach(function(row){
+      if(!map[row.supplierId]){
+        map[row.supplierId] = { nome:row.supplierName, items:[] };
+        order.push(map[row.supplierId]);
+      }
+      map[row.supplierId].items.push(row);
+    });
+    return order;
+  }
+  function importHeadline(found){
+    if(!found.length) return 'Dal Magazzino: nessun prodotto riconosciuto';
+    var nSup = importGroups(found).length;
+    var prod = found.length === 1 ? '1 prodotto' : found.length + ' prodotti';
+    var sup = nSup === 1 ? '1 fornitore' : nSup + ' fornitori';
+    return 'Dal Magazzino: ' + prod + ' per ' + sup;
+  }
+  function importMissingLabel(m){
+    var title = m.name ? m.name : 'Voce senza nome';
+    var bits = [];
+    if(m.supplier) bits.push('fornitore ' + m.supplier);
+    if(m.product) bits.push('prodotto ' + m.product);
+    return bits.length ? title + ' (' + bits.join(', ') + ')' : title;
+  }
+  function renderMagazzinoDialog(){
+    if(!pendingImport) return '';
+    var p = pendingImport;
+    var title = p.error ? 'Dal Magazzino' : importHeadline(p.found || []);
+    var list = '';
+    if(p.error){
+      list = '<p class="import-lead">Il link non è valido. Nessuna quantità è stata cambiata.</p>';
+    } else {
+      list = importGroups(p.found).map(function(g){
+        var lines = g.items.map(function(row){
+          return '<li><span>'+esc(row.productName)+'</span><span class="q">'+esc(fmtQty({ unita:row.unit }, row.qty))+'</span></li>';
+        }).join('');
+        return '<div class="import-supplier"><div class="import-supplier-name">'+esc(g.nome)+'</div><ul>'+lines+'</ul></div>';
+      }).join('');
+      if(p.missing.length){
+        list += '<div class="import-missing"><div class="import-supplier-name">Non trovati</div><ul>'+
+          p.missing.map(function(m){ return '<li>'+esc(importMissingLabel(m))+'</li>'; }).join('')+
+          '</ul></div>';
+      }
+      if(p.skippedQty.length){
+        list += '<div class="import-missing"><div class="import-supplier-name">Quantità non valida</div><ul>'+
+          p.skippedQty.map(function(m){ return '<li>'+esc(importMissingLabel(m))+'</li>'; }).join('')+
+          '</ul></div>';
+      }
+    }
+    var canInsert = !p.error && p.found && p.found.length;
+    return '<div class="import-overlay" role="dialog" aria-modal="true" aria-labelledby="importTitle">'+
+      '<div class="import-sheet">'+
+        '<h2 id="importTitle" class="import-title">'+esc(title)+'</h2>'+
+        '<div class="import-list">'+list+'</div>'+
+        '<p class="import-note">Nessun messaggio WhatsApp viene inviato. Dopo l’inserimento controlli le quantità e invii tu, come al solito.</p>'+
+        '<div class="import-actions">'+
+          '<button type="button" class="btn btn-primary" data-import-confirm'+(canInsert?'':' disabled')+'>Inserisci negli ordini</button>'+
+          '<button type="button" class="btn btn-ghost" data-import-cancel>Annulla</button>'+
+        '</div></div></div>';
+  }
+  function applyMagazzinoImport(){
+    var pending = pendingImport;
+    if(!pending || pending.error || !pending.found || !pending.found.length) return;
+    var supplierIds = [];
+    importHits = { suppliers:{}, products:{} };
+    pending.found.forEach(function(row){
+      var d = getDraft(row.supplierId);
+      d.qty[row.productId] = row.qty;
+      delete d.sentAsk;
+      importHits.suppliers[row.supplierId] = true;
+      importHits.products[row.supplierId+':'+row.productId] = true;
+      if(supplierIds.indexOf(row.supplierId) === -1) supplierIds.push(row.supplierId);
+    });
+    pendingImport = null;
+    clearImportHash();
+    state.tab = 'fornitori';
+    if(supplierIds.length === 1){
+      state.currentSupplierId = supplierIds[0];
+      state.view = 'order';
+    } else {
+      state.currentSupplierId = null;
+      state.view = 'fornitori';
+    }
+    render();
+    var hit = document.querySelector('.import-hit');
+    if(hit && hit.scrollIntoView){
+      setTimeout(function(){
+        try{ hit.scrollIntoView({ block:'nearest' }); }catch(e){}
+      }, 40);
+    }
+  }
+  function cancelMagazzinoImport(){
+    if(!pendingImport) return;
+    pendingImport = null;
+    clearImportHash();
+    render();
+  }
+
   var lastScreen = '';
   function render(){
     save();
@@ -478,7 +645,8 @@
     lastScreen = screenKey;
     var pushed = state.view === 'order' || state.view === 'summary';
     var screen = renderScreen();
-    app.innerHTML = '<div class="app-shell">' + renderBar() + '<div class="screens">' + screen + '</div>' + (pushed ? '' : renderNav()) + '</div>';
+    document.body.classList.toggle('import-open', !!pendingImport);
+    app.innerHTML = '<div class="app-shell">' + renderBar() + '<div class="screens">' + screen + '</div>' + (pushed ? '' : renderNav()) + '</div>' + renderMagazzinoDialog();
     if(keepScroll) window.scrollTo(0, scrollY);
     bindEvents();
   }
@@ -536,13 +704,15 @@
       var isToday = s.giorniOrdine.indexOf(today) > -1;
       var draftCount = draftLines(s.id).length, hasDraft = draftCount > 0;
       var daysTxt = scheduleLabel(s);
-      return '<button class="supplier-row'+(isToday?' today':'')+'" data-open-supplier="'+s.id+'">'+
+      var fromMag = !!importHits.suppliers[s.id];
+      return '<button class="supplier-row'+(isToday?' today':'')+(fromMag?' import-hit':'')+'" data-open-supplier="'+s.id+'">'+
         supplierBadge(s)+
         '<div class="supplier-body"><div class="supplier-name">'+esc(s.nome)+'</div>'+
         (hasPhone(s) ? '<div class="supplier-phone">'+esc(phoneLabel(s))+'</div>' : '')+
         '<div class="supplier-days">'+daysTxt+(hasPhone(s)?'':' · <span class="no-phone">senza numero</span>')+'</div></div>'+
-        ((hasDraft || isToday) ? '<div class="supplier-tags">'+
+        ((hasDraft || isToday || fromMag) ? '<div class="supplier-tags">'+
           (isToday ? '<span class="tag today">Oggi</span>' : '') +
+          (fromMag ? '<span class="tag import">Dal Magazzino</span>' : '') +
           (hasDraft ? '<span class="tag draft">'+draftCount+(draftCount===1?' articolo':' articoli')+'</span>' : '') +
         '</div>' : '') +
         '<span class="chevron">'+ic('back').replace('icn','icn').replace('d="M15 18l-6-6 6-6"','d="M9 18l6-6-6-6"')+'</span>'+
@@ -557,7 +727,8 @@
     var d = getDraft(s.id);
     var rows = s.prodotti.map(function(p){
       var q = d.qty[p.id] || 0;
-      return '<div class="product-row'+(q>0?' has-qty':'')+'"><div class="pname">'+esc(p.nome)+(p.unita?' <span class="unit">'+p.unita+'</span>':'')+'</div>'+
+      var hit = importHits.products[s.id+':'+p.id] ? ' import-hit' : '';
+      return '<div class="product-row'+(q>0?' has-qty':'')+hit+'"><div class="pname">'+esc(p.nome)+(p.unita?' <span class="unit">'+p.unita+'</span>':'')+'</div>'+
         '<div class="stepper">'+
           '<button class="step-btn" data-minus="'+p.id+'" aria-label="Meno">−</button>'+
           '<input class="qty" type="text" inputmode="'+(p.unita?'decimal':'numeric')+'" value="'+fmtNum(q)+'" data-qty="'+p.id+'" aria-label="Quantità">'+
@@ -612,7 +783,7 @@
       var lines = draftLines(s.id);
       var isToday = s.giorniOrdine.indexOf(todayIdx()) > -1;
       var itemsTxt = lines.map(function(p){ return p.nome + ' ' + fmtQty(p, getDraft(s.id).qty[p.id]); }).join(' · ');
-      return renderSentAsk(s.id)+'<div class="pending-card">'+
+      return renderSentAsk(s.id)+'<div class="pending-card'+(importHits.suppliers[s.id]?' import-hit':'')+'">'+
         '<div class="pending-head"><span class="nm">'+esc(s.nome)+'</span>'+(isToday?'<span class="tag today">Oggi</span>':'')+
           '<button class="icon-btn trash-btn" data-delete-draft="'+s.id+'" aria-label="Elimina bozza">'+ic('trash')+'</button></div>'+
         '<div class="pending-items">'+esc(itemsTxt)+'</div>'+
@@ -723,6 +894,15 @@
 
   function bindEvents(){
     var app = document.getElementById('app');
+
+    var importConfirm = app.querySelector('[data-import-confirm]');
+    if(importConfirm) importConfirm.addEventListener('click', function(){ applyMagazzinoImport(); });
+    var importCancel = app.querySelector('[data-import-cancel]');
+    if(importCancel) importCancel.addEventListener('click', function(){ cancelMagazzinoImport(); });
+    if(pendingImport){
+      var focusBtn = (importConfirm && !importConfirm.disabled) ? importConfirm : importCancel;
+      if(focusBtn) focusBtn.focus();
+    }
 
     app.querySelectorAll('[data-tab]').forEach(function(el){
       el.addEventListener('click', function(){
@@ -1153,6 +1333,17 @@
     }).catch(function(){});
   }
   if(remindOn()) syncReminders();
+
+  var initialImport = readImportFromHash();
+  if(initialImport) pendingImport = initialImport;
+  window.addEventListener('hashchange', function(){
+    var parsed = readImportFromHash();
+    if(parsed){ pendingImport = parsed; render(); return; }
+    if(pendingImport){ pendingImport = null; render(); }
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && pendingImport) cancelMagazzinoImport();
+  });
 
   render();
 })();

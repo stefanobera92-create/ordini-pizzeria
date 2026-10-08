@@ -305,3 +305,53 @@ hr.thin{ border:none; border-top:1px solid var(--line); margin:14px 0; }
   content:''; position:absolute; top:-1px; right:-3px; width:8px; height:8px; border-radius:50%;
   background:var(--gold); border:1.5px solid var(--paper);
 }
+.tag.import{ background:var(--tomato); color:var(--tomato-ink); }
+.supplier-row.import-hit, .pending-card.import-hit{
+  border-color:var(--tomato);
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--tomato) 28%, transparent), var(--shadow-soft);
+}
+.product-row.import-hit{ box-shadow:inset 3px 0 0 var(--tomato); }
+body.import-open{ overflow:hidden; }
+
+.import-overlay{
+  position:fixed; inset:0; z-index:80;
+  background:rgba(28,23,18,.46);
+  display:flex; align-items:flex-end; justify-content:center;
+  padding:12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width:640px){
+  .import-overlay{ align-items:center; padding:24px; }
+}
+.import-sheet{
+  width:min(520px, 100%);
+  max-height:min(86vh, 720px); max-height:min(86dvh, 720px);
+  display:flex; flex-direction:column;
+  background:var(--paper); color:var(--ink);
+  border:1px solid var(--line); border-radius:22px;
+  box-shadow:0 24px 60px -24px rgba(43,33,26,.55);
+  padding:20px 18px 16px;
+}
+.import-title{
+  font-family:'Big Shoulders Display', sans-serif; font-weight:800;
+  font-size:1.65rem; line-height:1.05; margin:0 0 12px;
+}
+.import-lead, .import-note{
+  font-size:.9rem; color:var(--ink-soft); line-height:1.45; margin:0 0 14px;
+}
+.import-list{ overflow:auto; margin:0 0 12px; min-height:0; }
+.import-supplier, .import-missing{
+  background:var(--card); border:1px solid var(--line); border-radius:16px;
+  padding:12px 14px; margin-bottom:10px;
+}
+.import-missing{ border-color:color-mix(in srgb, var(--gold) 70%, var(--line)); }
+.import-supplier-name{ font-weight:800; font-size:.95rem; margin-bottom:6px; }
+.import-supplier ul, .import-missing ul{ list-style:none; margin:0; padding:0; }
+.import-supplier li{
+  display:flex; justify-content:space-between; gap:12px;
+  padding:6px 0; font-size:.98rem; border-top:1px solid var(--line);
+}
+.import-supplier li:first-child{ border-top:none; }
+.import-supplier li .q{ font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.import-missing li{ font-size:.9rem; padding:4px 0; }
+.import-actions{ display:flex; flex-direction:column; gap:8px; flex:none; }
+.import-actions .btn-ghost{ background:var(--card); color:var(--ink); }
