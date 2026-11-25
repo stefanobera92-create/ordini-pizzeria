@@ -114,7 +114,7 @@
           prodotti:[ {id:'pn1', nome:'Cocco'}, {id:'pn2', nome:'Chocolate'}, {id:'pn3', nome:'Zanahoria'} ] },
         { id:'herbania', nome:'Herbania Surgelati', telefono:normPhone('659923500'), giorniOrdine:[],
           prodotti:[ {id:'he1', nome:'Salmone'} ] },
-        { id:'viera', nome:'Viera', telefono:normPhone('616412255'), giorniOrdine:[1,5], consegne:{1:5, 5:1},
+        { id:'viera', nome:'Viera', telefono:normPhone('616412255'), giorniOrdine:[1,4], consegne:{1:2, 4:5},
           prodotti:[
             {id:'v1', nome:'Cornetti'}, {id:'v2', nome:'Napolitane'}, {id:'v3', nome:'Donut'},
             {id:'v4', nome:'Prosciutto cotto'}, {id:'v5', nome:'Bacon'}, {id:'v6', nome:'Serrano'},
@@ -270,6 +270,22 @@
         sup.giorniOrdine = r[2]; sup.consegne = r[3];
       });
       savedState.migratedDeliverySchedule2 = true;
+    }
+    // Viera: ordini il lunedì e il giovedì, consegna il giorno dopo (lun→mar, gio→ven).
+    // Solo se ha ancora il vecchio default (lun→ven, ven→lun): un orario cambiato a mano resta com'è.
+    if(!savedState.migratedDeliverySchedule3){
+      var vieraNow = savedState.suppliers.filter(function(x){ return x.id==='viera'; })[0];
+      if(vieraNow && !vieraNow.giorniConsegna && !(vieraNow.consegna >= 0)){
+        var vieraDays = vieraNow.giorniOrdine.slice().sort().join(',');
+        var vieraPairs = vieraNow.consegne ? Object.keys(vieraNow.consegne).sort().map(function(k){
+          return k + ':' + vieraNow.consegne[k];
+        }).join(',') : '';
+        if(vieraDays === '1,5' && vieraPairs === '1:5,5:1'){
+          vieraNow.giorniOrdine = [1, 4];
+          vieraNow.consegne = {1:2, 4:5};
+        }
+      }
+      savedState.migratedDeliverySchedule3 = true;
     }
 
     var RENAMES = [
@@ -1065,7 +1081,8 @@
       suppliers: state.suppliers, drafts: state.drafts, lastOrders: state.lastOrders, knownDefaults: state.knownDefaults,
       migratedRealSuppliers: state.migratedRealSuppliers, migratedAralDays: state.migratedAralDays,
       migratedDeliverySchedule: state.migratedDeliverySchedule, migratedSupplierPhones: state.migratedSupplierPhones,
-      migratedSupplierPhonesV2: state.migratedSupplierPhonesV2, migratedDeliverySchedule2: state.migratedDeliverySchedule2
+      migratedSupplierPhonesV2: state.migratedSupplierPhonesV2, migratedDeliverySchedule2: state.migratedDeliverySchedule2,
+      migratedDeliverySchedule3: state.migratedDeliverySchedule3
     };
     var name = 'ordini-pizzeria-backup-' + new Date().toISOString().slice(0,10) + '.json';
     var blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
@@ -1099,6 +1116,8 @@
     if(data.migratedSupplierPhones) state.migratedSupplierPhones = true;
     if(data.migratedSupplierPhonesV2) state.migratedSupplierPhonesV2 = true;
     if(data.migratedDeliverySchedule2) state.migratedDeliverySchedule2 = true;
+    // un backup vecchio non ha il flag: va rivalutato, ma solo Viera col vecchio orario cambia
+    state.migratedDeliverySchedule3 = !!data.migratedDeliverySchedule3;
     mergeNewDefaults(state);
     state.settingsOpenId = null;
     render();
